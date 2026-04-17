@@ -38,7 +38,6 @@ ANJO_ADMIN_SECRET=${ANJO_ADMIN_SECRET}
 RESEND_API_KEY=${RESEND_API_KEY}
 ANJO_BASE_URL=https://${DOMAIN}
 ANJO_ENV=production
-PADDLE_SANDBOX=false
 EOF
   echo ".env created"
 else
