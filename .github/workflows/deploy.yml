@@ -1,0 +1,45 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+
+      - name: Sync code to server
+        run: |
+          rsync -az --delete \
+            -e "ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no" \
+            ./ ubuntu@${{ secrets.EC2_HOST }}:~/anjo/ \
+            --exclude '.git' \
+            --exclude '.venv' \
+            --exclude '.env' \
+            --exclude 'data/' \
+            --exclude '*.pyc' \
+            --exclude '__pycache__'
+
+      - name: Inject secrets and restart
+        env:
+          ANJO_ADMIN_SECRET: ${{ secrets.ANJO_ADMIN_SECRET }}
+          RESEND_API_KEY:    ${{ secrets.RESEND_API_KEY }}
+        run: |
+          ssh -i /tmp/deploy_key \
+              -o StrictHostKeyChecking=no \
+              ubuntu@${{ secrets.EC2_HOST }} \
+              "sed -i 's|^ANJO_ADMIN_SECRET=.*|ANJO_ADMIN_SECRET=$ANJO_ADMIN_SECRET|' ~/anjo/.env
+               sed -i 's|^RESEND_API_KEY=.*|RESEND_API_KEY=$RESEND_API_KEY|' ~/anjo/.env
+               sudo systemctl restart anjo"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/deploy_key

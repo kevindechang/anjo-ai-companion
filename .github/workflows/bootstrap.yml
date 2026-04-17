@@ -1,0 +1,37 @@
+name: Bootstrap EC2 server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+
+      - name: Copy repo to server
+        run: |
+          rsync -az --delete \
+            -e "ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no" \
+            ./ ubuntu@${{ secrets.EC2_HOST }}:~/anjo/ \
+            --exclude '.git'
+
+      - name: Run setup script
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANJO_ADMIN_SECRET: ${{ secrets.ANJO_ADMIN_SECRET }}
+          RESEND_API_KEY:    ${{ secrets.RESEND_API_KEY }}
+        run: |
+          ssh -i /tmp/deploy_key \
+            -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.EC2_HOST }} \
+            "ANTHROPIC_API_KEY='$ANTHROPIC_API_KEY' ANJO_ADMIN_SECRET='$ANJO_ADMIN_SECRET' RESEND_API_KEY='$RESEND_API_KEY' bash ~/anjo/scripts/server_setup.sh"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/deploy_key

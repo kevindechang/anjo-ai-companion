@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anjo — New password</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d0f; --surface: #1a1918; --surface2: #232221;
+      --border: #363432; --accent: #c9a96e; --accent2: #d4b896;
+      --text: #e6e2dc; --text-muted: #887f76; --red: #e07a5f;
+      --dyn-c0: #c9a96e; --dyn-c1: #d4b896;
+      --dyn-shadow: rgba(201,169,110,0.22);
+      --font: 'DM Sans', system-ui, sans-serif;
+    }
+    body {
+      background: var(--bg); color: var(--text); font-family: var(--font);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .wrap { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; }
+    .orb-wrap { width: 120px; height: 120px; margin-bottom: 32px; flex-shrink: 0; }
+    #auth-orb { border-radius: 50%; display: block; }
+    h1 {
+      font-size: 32px; font-weight: 300; letter-spacing: -0.03em;
+      text-align: center; margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--dyn-c0), var(--dyn-c1));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .sub { font-size: 15px; color: var(--text-muted); text-align: center; margin-bottom: 36px; font-weight: 300; }
+    form { width: 100%; }
+    label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px; margin-top: 16px; letter-spacing: 0.04em; text-transform: uppercase; }
+    input[type="password"] {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-size: 16px;
+      font-family: var(--font); padding: 12px 14px; outline: none; transition: border-color 0.15s;
+    }
+    input[type="password"]:focus { border-color: var(--dyn-c0); }
+    input::placeholder { color: var(--text-muted); }
+    .btn {
+      width: 100%; margin-top: 24px; background: linear-gradient(135deg, var(--dyn-c0), var(--dyn-c1)); color: #0f0d0c;
+      border: none; border-radius: 28px; padding: 13px;
+      font-size: 15px; font-weight: 600; font-family: var(--font);
+      cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+      box-shadow: 0 4px 24px var(--dyn-shadow);
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:active { transform: scale(0.97); }
+    .footer { text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-muted); }
+    .footer a { color: var(--dyn-c1); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="orb-wrap">
+      <canvas id="auth-orb"></canvas>
+    </div>
+    <h1>Anjo</h1>
+    <p class="sub">Choose a new password.</p>
+    <form method="POST" action="/reset">
+      <input type="hidden" name="token" value="<!--TOKEN-->" />
+      <label for="password">New password</label>
+      <input type="password" id="password" name="password" autofocus placeholder="at least 6 characters" autocomplete="new-password" />
+      <button type="submit" class="btn">Set new password</button>
+    </form>
+    <!--ERROR-->
+    <p class="footer"><a href="/login">Back to sign in</a></p>
+  </div>
+  <script>
+    const T=['#4A6FA5','#2EC4B6','#E86F5C'],V=['#7B6B9E','#5AC8BE','#F7D26A'];
+    const A=['#2C3E6B','#45B7A0','#FF6F91'],L=['#3D1A5C','#C060C0','#FFB0E8'];
+    const SZ=120,canvas=document.getElementById('auth-orb');
+    const dpr=window.devicePixelRatio||1;
+    canvas.width=SZ*dpr;canvas.height=SZ*dpr;canvas.style.width=SZ+'px';canvas.style.height=SZ+'px';
+    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+    const blobs=[{phase:0.0,rx:0.62,ry:0.55,size:0.82},{phase:2.4,rx:0.58,ry:0.62,size:0.78},{phase:4.8,rx:0.50,ry:0.58,size:0.74},{phase:1.2,rx:0.54,ry:0.48,size:0.68}];
+    let t=Math.random()*100;
+    const _root=document.documentElement;
+    function _h(hex){const n=parseInt(hex.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
+    function _lerp(a,b,f){const[ar,ag,ab]=_h(a),[br,bg,bb]=_h(b);return[ar+(br-ar)*f,ag+(bg-ag)*f,ab+(bb-ab)*f];}
+    function _rgb(stops,v){const c=Math.max(0,Math.min(1,v))*(stops.length-1);const i=Math.min(Math.floor(c),stops.length-2);return _lerp(stops[i],stops[i+1],c-i);}
+    function _n2(x,y){const X=Math.floor(x),Y=Math.floor(y),fx=x-X,fy=y-Y;const h=(X*374761393+Y*668265263)&0xffffffff,h2=((X+1)*374761393+Y*668265263)&0xffffffff,h3=(X*374761393+(Y+1)*668265263)&0xffffffff,h4=((X+1)*374761393+(Y+1)*668265263)&0xffffffff;const r1=(h>>>13)/(0xffffffff>>>0)*2-1,r2=(h2>>>13)/(0xffffffff>>>0)*2-1,r3=(h3>>>13)/(0xffffffff>>>0)*2-1,r4=(h4>>>13)/(0xffffffff>>>0)*2-1;const mx=r1+(r2-r1)*fx,mx2=r3+(r4-r3)*fx;return mx+(mx2-mx)*fy;}
+    ctx.beginPath();ctx.arc(SZ/2,SZ/2,SZ/2,0,Math.PI*2);ctx.fillStyle='#100e0c';ctx.fill();
+    function draw(){const cx=SZ/2,cy=SZ/2,r=SZ/2;t+=0.003;const trust=Math.sin(t*0.40)*0.5+0.5,valence=Math.sin(t*0.27+1.0)*0.5+0.5,arousal=Math.sin(t*0.33+2.3)*0.5+0.5,longing=Math.sin(t*0.19+3.7)*0.5+0.5;const cols=[_rgb(T,trust),_rgb(V,valence),_rgb(A,arousal),_rgb(L,longing)];const[d0r,d0g,d0b]=cols[0],[d1r,d1g,d1b]=cols[1];_root.style.setProperty('--dyn-c0',`rgb(${d0r},${d0g},${d0b})`);_root.style.setProperty('--dyn-c1',`rgb(${d1r},${d1g},${d1b})`);_root.style.setProperty('--dyn-shadow',`rgba(${d0r},${d0g},${d0b},0.22)`);ctx.save();ctx.beginPath();ctx.arc(cx,cy,r-0.5,0,Math.PI*2);ctx.clip();ctx.globalCompositeOperation='source-over';ctx.fillStyle='rgba(13,13,15,0.10)';ctx.fillRect(0,0,SZ,SZ);ctx.globalCompositeOperation='lighter';blobs.forEach((b,i)=>{const nx=_n2(t*b.rx+b.phase,t*0.31+b.phase*0.4),ny=_n2(t*b.ry+b.phase+1.7,t*0.27+b.phase*0.6),bx=cx+nx*r*0.28,by=cy+ny*r*0.28,br=r*b.size,grad=ctx.createRadialGradient(bx,by,0,bx,by,br);const[rc,gc,bc]=cols[i];grad.addColorStop(0,`rgba(${rc},${gc},${bc},0.34)`);grad.addColorStop(0.55,`rgba(${rc},${gc},${bc},0.12)`);grad.addColorStop(1,`rgba(${rc},${gc},${bc},0)`);ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();});ctx.globalCompositeOperation='source-over';const[rc,gc,bc]=_rgb(T,trust);const rim=ctx.createRadialGradient(cx,cy,r*0.65,cx,cy,r);rim.addColorStop(0,'rgba(0,0,0,0)');rim.addColorStop(1,`rgba(${rc},${gc},${bc},0.12)`);ctx.fillStyle=rim;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.restore();requestAnimationFrame(draw);}
+    draw();
+    document.querySelector('form').addEventListener('submit', e => {
+      const btn = e.currentTarget.querySelector('[type=submit]');
+      btn.disabled = true;
+      btn.textContent = 'Please wait…';
+    });
+  </script>
+</body>
+</html>

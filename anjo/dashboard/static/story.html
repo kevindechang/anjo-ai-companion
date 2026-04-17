@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our story · Anjo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #1a1918;
+      --surface2: #232221;
+      --border: #363432;
+      /* accent interpolated from trust score via JS — gold is a safe CSS fallback */
+      --accent: #c9a96e;
+      --accent2: #d4b896;
+      --glow-rgb: 201,169,110;
+      --text: #e6e2dc;
+      --text-muted: #887f76;
+      --radius: 14px;
+      --font: 'DM Sans', system-ui, sans-serif;
+      --max-width: 680px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      padding: 14px 20px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent2);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+    .back-btn:hover { opacity: 0.7; }
+
+    .page-title {
+      font-size: 17px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      transition: background 0.8s ease;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+      padding: 0 20px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 12px 16px;
+      cursor: pointer;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+    /* ── Content ── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px 48px;
+    }
+
+    .panel { display: none; max-width: var(--max-width); margin: 0 auto; }
+    .panel.active { display: block; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .card-body {
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    /* ── Stats ── */
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 12px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(var(--glow-rgb), 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+      filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 40%, transparent));
+    }
+
+    .stat-value.small { font-size: 13px; padding-top: 5px; }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Residue ── */
+    .residue-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .residue-item:last-child { border-bottom: none; }
+
+    .residue-bar {
+      width: 56px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .residue-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 6px rgba(var(--glow-rgb), 0.5);
+      box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
+    }
+
+    .residue-emotion {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .residue-source {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    /* ── Tags ── */
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    /* ── Locked section ── */
+    .locked-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      margin-bottom: 14px;
+      text-align: center;
+      opacity: 0.5;
+    }
+
+    .locked-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .locked-hint {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* ── Timeline ── */
+    .session-item {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .session-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .session-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .session-connector {
+      width: 1px;
+      flex: 1;
+      background: var(--border);
+      margin-top: 6px;
+      min-height: 16px;
+    }
+
+    .session-body { flex: 1; }
+
+    .session-date {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .session-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .session-tone {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--accent2);
+      margin-bottom: 6px;
+    }
+
+    .session-summary {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .session-topics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .session-topic {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 3px 9px;
+    }
+
+    /* ── Letter ── */
+    .letter-text {
+      font-size: 15px;
+      line-height: 1.85;
+      color: var(--text);
+      white-space: pre-wrap;
+      font-style: italic;
+      font-weight: 300;
+    }
+
+    .lock-box {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .lock-title {
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .lock-hint {
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 260px;
+      margin: 0 auto;
+    }
+
+    /* ── Misc ── */
+    .empty {
+      color: var(--text-muted);
+      font-size: 14px;
+      font-style: italic;
+      padding: 8px 0;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .loading { animation: pulse 1.4s infinite; color: var(--text-muted); text-align: center; padding: 40px; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <button onclick="window.location.href='/chat'" class="back-btn">← Anjo</button>
+  <span class="page-title">Our story</span>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('memories')">Memories</button>
+  <button class="tab-btn" onclick="showTab('timeline')">Timeline</button>
+  <button class="tab-btn" onclick="showTab('letter')">Letter</button>
+</div>
+
+<div class="content">
+
+  <div class="panel active" id="panel-memories">
+    <div id="stats-row" class="stats-row"></div>
+    <div id="opinion-card"></div>
+    <div id="residue-card"></div>
+    <div id="desires-card"></div>
+  </div>
+
+  <div class="panel" id="panel-timeline">
+    <div id="timeline-list"><div class="loading">···</div></div>
+  </div>
+
+  <div class="panel" id="panel-letter">
+    <div id="letter-content"><div class="loading">···</div></div>
+  </div>
+
+</div>
+
+<script>
+  const TAB_NAMES = ['memories', 'timeline', 'letter'];
+  const loaded = { memories: false, timeline: false, letter: false };
+
+  // ── Temperature system — continuous trust interpolation ───────────────────
+  // 5 anchor stops mapped evenly across trust 0.0 → 1.0
+  const T_ACCENT  = ['#9E9E9E', '#C4A882', '#C9A96E', '#D4784A', '#C94F6A'];
+  const T_ACCENT2 = ['#b8b8b8', '#d4bc98', '#d4b896', '#e09070', '#d8708a'];
+  const T_BG      = ['#0d0d0f', '#0e0d0d', '#0f0d0c', '#100d0b', '#110d0a'];
+
+  function _hexRgb(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+  }
+
+  function _lerp(a, b, t) {
+    const [ar,ag,ab] = _hexRgb(a), [br,bg,bb] = _hexRgb(b);
+    const r = Math.round(ar + (br-ar)*t).toString(16).padStart(2,'0');
+    const g = Math.round(ag + (bg-ag)*t).toString(16).padStart(2,'0');
+    const v = Math.round(ab + (bb-ab)*t).toString(16).padStart(2,'0');
+    return `#${r}${g}${v}`;
+  }
+
+  function _sample(stops, trust) {
+    const t = Math.max(0, Math.min(1, trust)) * (stops.length - 1);
+    const i = Math.min(Math.floor(t), stops.length - 2);
+    return _lerp(stops[i], stops[i+1], t - i);
+  }
+
+  function applyTemperature(trust) {
+    const accent  = _sample(T_ACCENT,  trust);
+    const accent2 = _sample(T_ACCENT2, trust);
+    const bg      = _sample(T_BG,      trust);
+    const [r,g,b] = _hexRgb(accent);
+    const root = document.documentElement;
+    root.style.setProperty('--accent',   accent);
+    root.style.setProperty('--accent2',  accent2);
+    root.style.setProperty('--bg',       bg);
+    root.style.setProperty('--glow-rgb', `${r},${g},${b}`);
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  function showTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', TAB_NAMES[i] === name);
+    });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`panel-${name}`).classList.add('active');
+    if (!loaded[name]) {
+      loaded[name] = true;
+      if (name === 'memories') loadMemories();
+      if (name === 'timeline') loadTimeline();
+      if (name === 'letter')   loadLetter();
+    }
+  }
+
+  function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Memories ──────────────────────────────────────────────────────────────
+  const STAGE_INT = { stranger:1, acquaintance:2, friend:3, close:4, intimate:5 };
+
+  async function loadMemories() {
+    try {
+      const d = await fetch('/api/story/memories').then(r => r.json());
+      applyTemperature(d.relationship?.trust_score ?? 0);
+      renderMemories(d);
+    } catch {
+      document.getElementById('opinion-card').innerHTML = '<p class="empty">Could not load.</p>';
+    }
+  }
+
+  function stageLabel(s) {
+    return { stranger:'Strangers', acquaintance:'Acquaintances', friend:'Friends', close:'Close', intimate:'Intimate' }[s] || s;
+  }
+
+  function renderMemories(d) {
+    const rel = d.relationship || {};
+    const stageInt = STAGE_INT[rel.stage] || 1;
+
+    // Stats with glow
+    document.getElementById('stats-row').innerHTML = `
+      <div class="stat">
+        <div class="stat-value">${rel.session_count ?? 0}</div>
+        <div class="stat-label">conversations</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${Math.round((rel.trust_score ?? 0) * 100)}%</div>
+        <div class="stat-label">trust</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value ${stageLabel(rel.stage).length > 8 ? 'small' : ''}">${esc(stageLabel(rel.stage))}</div>
+        <div class="stat-label">stage</div>
+      </div>`;
+
+    // Opinion — always visible
+    document.getElementById('opinion-card').innerHTML = d.opinion
+      ? `<div class="card"><div class="card-label">What Anjo knows about you</div><div class="card-body">${esc(d.opinion)}</div></div>`
+      : `<div class="card"><div class="card-label">What Anjo knows about you</div><p class="empty">Still getting to know you.</p></div>`;
+
+    // Residue — unlocks at friend (stage_int >= 3)
+    let residueHtml = '';
+    if (stageInt >= 3) {
+      if (d.emotional_residue && d.emotional_residue.length) {
+        residueHtml = '<div class="card"><div class="card-label">What Anjo is carrying</div>';
+        for (const er of d.emotional_residue) {
+          const pct = Math.round((er.intensity ?? 0) * 100);
+          residueHtml += `
+            <div class="residue-item">
+              <div class="residue-bar"><div class="residue-fill" style="width:${pct}%"></div></div>
+              <div>
+                <div class="residue-emotion">${esc(er.emotion)}</div>
+                <div class="residue-source">${esc(er.source)}</div>
+              </div>
+            </div>`;
+        }
+        residueHtml += '</div>';
+      } else {
+        residueHtml = `<div class="card"><div class="card-label">What Anjo is carrying</div><p class="empty">Nothing unresolved right now.</p></div>`;
+      }
+    } else {
+      residueHtml = `<div class="locked-card">
+        <div class="locked-label">What Anjo is carrying</div>
+        <div class="locked-hint">Anjo doesn't open up this much yet.</div>
+      </div>`;
+    }
+    document.getElementById('residue-card').innerHTML = residueHtml;
+
+    // Desires — unlocks at close (stage_int >= 4)
+    let desiresHtml = '';
+    if (stageInt >= 4) {
+      if (d.desires && d.desires.length) {
+        const tags = d.desires.map(x => `<div class="tag">${esc(x)}</div>`).join('');
+        desiresHtml = `<div class="card"><div class="card-label">What Anjo wants for us</div><div class="tag-list">${tags}</div></div>`;
+      } else {
+        desiresHtml = `<div class="card"><div class="card-label">What Anjo wants for us</div><p class="empty">Still forming.</p></div>`;
+      }
+    } else {
+      desiresHtml = `<div class="locked-card">
+        <div class="locked-label">What Anjo wants for us</div>
+        <div class="locked-hint">This takes time to earn.</div>
+      </div>`;
+    }
+    document.getElementById('desires-card').innerHTML = desiresHtml;
+  }
+
+  // ── Timeline ─────────────────────────────────────────────────────────────
+  async function loadTimeline() {
+    try {
+      const d = await fetch('/api/story/sessions').then(r => r.json());
+      renderTimeline(d.sessions || []);
+    } catch {
+      document.getElementById('timeline-list').innerHTML = '<p class="empty">Could not load.</p>';
+    }
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }); }
+    catch { return iso; }
+  }
+
+  function renderTimeline(sessions) {
+    const el = document.getElementById('timeline-list');
+    if (!sessions.length) {
+      el.innerHTML = '<p class="empty">No reflected conversations yet.</p>';
+      return;
+    }
+    el.innerHTML = sessions.map((s, i) => {
+      const isLast = i === sessions.length - 1;
+      const topics = (s.topics || []).map(t => `<span class="session-topic">${esc(t)}</span>`).join('');
+      return `<div class="session-item">
+        <div class="session-line">
+          <div class="session-dot"></div>
+          ${isLast ? '' : '<div class="session-connector"></div>'}
+        </div>
+        <div class="session-body">
+          <div class="session-date">${formatDate(s.timestamp)}</div>
+          <div class="session-card">
+            ${s.emotional_tone ? `<div class="session-tone">${esc(s.emotional_tone)}</div>` : ''}
+            ${s.summary ? `<div class="session-summary">${esc(s.summary)}</div>` : ''}
+            ${topics ? `<div class="session-topics">${topics}</div>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Letter ────────────────────────────────────────────────────────────────
+  async function loadLetter() {
+    try {
+      const d = await fetch('/api/story/letter').then(r => r.json());
+      if (d.locked) renderLetterLocked();
+      else renderLetter(d.letter);
+    } catch {
+      document.getElementById('letter-content').innerHTML = '<p class="empty">Could not load.</p>';
+    }
+  }
+
+  function renderLetterLocked() {
+    document.getElementById('letter-content').innerHTML = `
+      <div class="lock-box">
+        <div class="lock-title">Not yet</div>
+        <div class="lock-hint">Anjo needs to know you better before writing this. Keep talking. It'll come.</div>
+      </div>`;
+  }
+
+  function renderLetter(letter) {
+    document.getElementById('letter-content').innerHTML = `
+      <div class="card">
+        <div class="card-label">A letter from Anjo</div>
+        <div class="letter-text">${esc(letter)}</div>
+      </div>`;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loaded.memories = true;
+  loadMemories();
+</script>
+</body>
+</html>

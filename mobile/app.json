@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Anjo",
+    "slug": "anjo",
+    "version": "1.0.0",
+    "scheme": "anjo",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0a0a0a"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.anjo.app"
+    },
+    "android": {
+      "package": "com.anjo.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0a"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset"
+    ]
+  }
+}

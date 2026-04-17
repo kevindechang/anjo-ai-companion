@@ -1,0 +1,47 @@
+# Secrets — never commit
+.env
+.env.local
+.env.production
+.env.development
+*.pem
+*.key
+
+# Data — contains user data and ChromaDB
+data/
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+dist/
+.mypy_cache/
+.pytest_cache/
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+
+# macOS
+.DS_Store
+
+# Agent / IDE configs (local only)
+.claude/settings.local.json
+.continue/
+.agents/
+.aider*
+
+# Security testing artifacts (never commit)
+deliverables/
+.playwright-cli/
+SECURITY_REPORT.md
+
+# Internal / operational files
+tasks
+ORCHESTRATOR-PROMPT.md
+skills-lock.json
+
+# Logs
+*.log
+error.log

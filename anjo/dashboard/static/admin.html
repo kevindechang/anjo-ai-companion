@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Anjo — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d0f; --surface: #1a1918; --surface2: #232221; --surface3: #2a2826;
+      --border: #363432; --accent: #c9a96e; --accent2: #d4b896;
+      --text: #e6e2dc; --text-muted: #887f76;
+      --green: #34d399; --red: #e07a5f; --yellow: #fbbf24; --blue: #60a5fa;
+      --font: 'DM Sans', system-ui, sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 32px; border-bottom: 1px solid var(--border);
+      background: var(--bg); position: sticky; top: 0; z-index: 10;
+    }
+    .logo { font-size: 17px; font-weight: 500; letter-spacing: -0.02em; }
+    .logo span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    #countdown { font-size: 12px; color: var(--text-muted); }
+    #refresh-btn {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+      font-size: 13px; font-family: var(--font); padding: 7px 16px; border-radius: 20px;
+      cursor: pointer; transition: color 0.15s, border-color 0.15s;
+    }
+    #refresh-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* ── Auth gate ── */
+    #auth-gate {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 70vh; gap: 14px;
+    }
+    #auth-gate h2 { font-size: 18px; font-weight: 400; color: var(--text-muted); margin-bottom: 4px; }
+    #key-input {
+      width: 300px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-size: 15px; font-family: var(--font);
+      padding: 12px 14px; outline: none; transition: border-color 0.15s; text-align: center;
+    }
+    #key-input:focus { border-color: var(--accent); }
+    #key-input::placeholder { color: var(--text-muted); }
+    #key-btn {
+      background: var(--accent); color: #0f0d0c; border: none; border-radius: 24px;
+      padding: 11px 28px; font-size: 14px; font-weight: 600; font-family: var(--font);
+      cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+    }
+    #key-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    #auth-error { font-size: 13px; color: var(--red); min-height: 20px; }
+
+    /* ── Main ── */
+    main { max-width: 1600px; margin: 0 auto; padding: 32px; }
+
+    /* ── Stats ── */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+    @media (max-width: 768px) {
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stat-value { font-size: 22px; }
+      header { padding: 12px 16px; }
+      main { padding: 16px; }
+      .controls { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .controls-left { flex-wrap: wrap; }
+      #search { width: 100%; }
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { min-width: 700px; }
+    }
+    @media (max-width: 480px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat-card { padding: 14px 16px; }
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px 24px;
+    }
+    .stat-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .stat-value { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+    .stat-value.gold {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .stat-value.green { color: var(--green); }
+    .stat-value.blue  { color: var(--blue); }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+    .controls-left { display: flex; align-items: center; gap: 12px; }
+    .section-title { font-size: 15px; font-weight: 500; }
+    #user-count { font-size: 13px; color: var(--text-muted); }
+    #search {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      font-size: 13px; font-family: var(--font); padding: 8px 16px;
+      border-radius: 20px; outline: none; width: 240px; transition: border-color 0.15s;
+    }
+    #search:focus { border-color: var(--accent); }
+    #search::placeholder { color: var(--text-muted); }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); padding: 12px 16px; text-align: left;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    td { padding: 11px 16px; vertical-align: middle; }
+
+    /* ── User cell ── */
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: #0f0d0c;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+    }
+    .u-name { font-weight: 500; font-size: 14px; }
+    .u-id   { font-size: 11px; color: var(--text-muted); font-family: monospace; margin-top: 1px; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .badge-free     { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+    .badge-pro      { background: rgba(201,169,110,0.14); color: var(--accent);  border: 1px solid rgba(201,169,110,0.3); }
+    .badge-premium  { background: rgba(96,165,250,0.14);  color: var(--blue);    border: 1px solid rgba(96,165,250,0.3); }
+    .badge-verified { background: rgba(52,211,153,0.12);  color: var(--green);   border: 1px solid rgba(52,211,153,0.25); }
+    .badge-unverified { background: rgba(224,122,95,0.12); color: var(--red);    border: 1px solid rgba(224,122,95,0.25); }
+    .badge-live     { background: rgba(52,211,153,0.12);  color: var(--green); }
+
+    /* ── Daily bar ── */
+    .bar-wrap { min-width: 90px; }
+    .bar-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .bar-track { height: 4px; background: var(--border); border-radius: 2px; }
+    .bar-fill  { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s; }
+    .bar-fill.warn { background: var(--yellow); }
+    .bar-fill.crit { background: var(--red); }
+
+    /* ── Data dots ── */
+    .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+    .dot-on  { background: var(--green); }
+    .dot-off { background: var(--border); }
+    .data-row { font-size: 12px; color: var(--text-muted); line-height: 1.8; }
+
+    .mono { font-family: monospace; font-size: 13px; }
+    .muted { color: var(--text-muted); }
+
+    /* ── Action buttons ── */
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 600; font-family: var(--font);
+      padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+      background: var(--surface2); color: var(--text-muted);
+    }
+    .btn:hover { color: var(--text); border-color: var(--text-muted); }
+    .btn-view  { color: var(--blue); border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.08); }
+    .btn-view:hover { background: rgba(96,165,250,0.14); border-color: var(--blue); }
+    .btn-ok    { color: var(--green); border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.08); }
+    .btn-ok:hover { background: rgba(52,211,153,0.14); border-color: var(--green); }
+    .btn-warn  { color: var(--yellow); border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); }
+    .btn-warn:hover { background: rgba(251,191,36,0.14); border-color: var(--yellow); }
+    .btn-danger { color: var(--red); border-color: rgba(224,122,95,0.3); background: rgba(224,122,95,0.08); }
+    .btn-danger:hover { background: rgba(224,122,95,0.14); border-color: var(--red); }
+
+    /* ── Empty / loading ── */
+    .empty { text-align: center; padding: 56px; color: var(--text-muted); font-size: 14px; }
+
+    /* ── Detail panel (slide-out) ── */
+    #panel-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 100; backdrop-filter: blur(2px);
+    }
+    #panel {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: min(680px, 100vw); background: var(--surface); border-left: 1px solid var(--border);
+      z-index: 101; overflow-y: auto; padding: 28px;
+      transform: translateX(100%); transition: transform 0.25s ease;
+    }
+    #panel.open { transform: translateX(0); }
+    .panel-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 24px; gap: 12px;
+    }
+    .panel-title { font-size: 18px; font-weight: 500; }
+    .panel-sub   { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-family: monospace; }
+    #panel-close {
+      flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 18px; width: 32px; height: 32px;
+      border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s;
+    }
+    #panel-close:hover { color: var(--text); }
+
+    /* Panel tabs */
+    .panel-tabs { display: flex; gap: 2px; margin-bottom: 20px; background: var(--bg); border-radius: 10px; padding: 3px; }
+    .tab-btn {
+      flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px;
+      font-family: var(--font); font-weight: 500; cursor: pointer;
+      color: var(--text-muted); background: transparent; transition: all 0.15s;
+    }
+    .tab-btn.active { background: var(--surface); color: var(--text); }
+
+    /* ── Profile tab ── */
+    .stage-track {
+      display: flex; gap: 0; margin-bottom: 6px; border-radius: 8px; overflow: hidden;
+    }
+    .stage-step {
+      flex: 1; padding: 7px 4px; text-align: center; font-size: 10px; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted);
+      background: var(--surface2); border-right: 1px solid var(--bg); transition: all 0.2s;
+    }
+    .stage-step:last-child { border-right: none; }
+    .stage-step.active { background: rgba(201,169,110,0.2); color: var(--accent); }
+    .stage-step.past   { background: rgba(201,169,110,0.08); color: rgba(201,169,110,0.5); }
+
+    .ocean-bar { margin-bottom: 10px; }
+    .ocean-label {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .ocean-name  { font-size: 12px; font-weight: 600; color: var(--text); }
+    .ocean-trait { font-size: 11px; color: var(--text-muted); }
+    .ocean-val   { font-size: 12px; font-weight: 600; color: var(--accent); }
+    .ocean-track { height: 5px; background: var(--border); border-radius: 3px; }
+    .ocean-fill  { height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.5s; }
+
+    .pad-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .pad-card { background: var(--surface2); border-radius: 10px; padding: 10px 12px; text-align: center; }
+    .pad-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 4px; }
+    .pad-val   { font-size: 18px; font-weight: 600; }
+    .pad-val.pos { color: var(--green); }
+    .pad-val.neg { color: var(--red); }
+    .pad-val.neu { color: var(--text-muted); }
+
+    .fact-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fact-chip {
+      font-size: 12px; padding: 4px 10px; border-radius: 20px;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      line-height: 1.4;
+    }
+
+    .residue-item { background: var(--surface2); border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; }
+    .residue-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .residue-emotion { font-size: 12px; font-weight: 600; text-transform: capitalize; color: var(--accent2); }
+    .residue-intensity { font-size: 12px; color: var(--text-muted); }
+    .residue-source { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+    .note-item { font-size: 13px; color: var(--text); padding: 6px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
+    .note-item:last-child { border-bottom: none; }
+
+    .reflection-item { background: var(--surface2); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+    .reflection-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .reflection-tone { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent2); }
+    .reflection-date { font-size: 11px; color: var(--text-muted); }
+    .reflection-summary { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .journal-block {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; font-size: 12px; line-height: 1.7; color: var(--text-muted);
+      white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto;
+    }
+
+    /* Panel sections */
+    .panel-section { margin-bottom: 20px; }
+    .panel-section-title {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); margin-bottom: 12px;
+    }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .info-item { background: var(--surface2); border-radius: 10px; padding: 12px 14px; }
+    .info-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .info-value { font-size: 14px; font-weight: 500; }
+
+    /* Panel actions */
+    .panel-actions { display: flex; flex-direction: column; gap: 10px; }
+    .action-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface2); border-radius: 10px; padding: 12px 14px; gap: 12px;
+    }
+    .action-label { font-size: 13px; font-weight: 500; }
+    .action-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .action-input {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      font-size: 13px; font-family: var(--font); padding: 6px 10px; border-radius: 8px;
+      width: 90px; outline: none;
+    }
+    .action-input:focus { border-color: var(--accent); }
+
+    /* Chat messages */
+    .chat-list { display: flex; flex-direction: column; gap: 8px; }
+    .chat-msg {
+      padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5;
+    }
+    .chat-msg.user    { background: rgba(201,169,110,0.1); border: 1px solid rgba(201,169,110,0.2); margin-left: 32px; }
+    .chat-msg.assistant { background: var(--surface2); border: 1px solid var(--border); margin-right: 32px; }
+    .chat-role { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .chat-role.user { color: var(--accent); }
+    .chat-role.assistant { color: var(--text-muted); }
+    .chat-text { color: var(--text); white-space: pre-wrap; word-break: break-word; }
+
+    /* Self-core JSON */
+    .json-view {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px; font-family: monospace; font-size: 12px; line-height: 1.6;
+      overflow-x: auto; white-space: pre; color: var(--text-muted);
+    }
+    .json-key    { color: var(--accent2); }
+    .json-str    { color: var(--green); }
+    .json-num    { color: var(--blue); }
+    .json-bool   { color: var(--yellow); }
+    .json-null   { color: var(--text-muted); }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      font-size: 13px; padding: 10px 20px; border-radius: 24px; z-index: 200;
+      opacity: 0; transition: opacity 0.2s; pointer-events: none;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    #toast.show { opacity: 1; }
+    #toast.ok  { border-color: rgba(52,211,153,0.4); color: var(--green); }
+    #toast.err { border-color: rgba(224,122,95,0.4); color: var(--red); }
+
+    @media (max-width: 1100px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px)  { main { padding: 16px; } .stats { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span>Anjo</span> Admin</div>
+  <div class="header-right">
+    <span id="countdown"></span>
+    <button id="refresh-btn" onclick="load()">↻ Refresh</button>
+  </div>
+</header>
+
+<!-- Auth gate -->
+<div id="auth-gate" style="display:none">
+  <h2>Admin key required</h2>
+  <input id="key-input" type="password" placeholder="ANJO_ADMIN_SECRET" autocomplete="off"/>
+  <button id="key-btn" onclick="tryKey()">Unlock dashboard</button>
+  <span id="auth-error"></span>
+</div>
+
+<!-- Dashboard -->
+<main id="main" style="display:none">
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value" id="s-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Sessions</div>
+      <div class="stat-value green" id="s-active">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Paying Subscribers</div>
+      <div class="stat-value gold" id="s-subs">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total API Balance</div>
+      <div class="stat-value blue" id="s-balance">—</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="controls-left">
+      <span class="section-title">Users</span>
+      <span id="user-count" class="muted"></span>
+    </div>
+    <input id="search" type="text" placeholder="Search username or email…" oninput="render()"/>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Plan</th>
+          <th>Daily Usage</th>
+          <th>Balance</th>
+          <th>Msg Credits</th>
+          <th>Data</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty-state" class="empty" style="display:none">No users found.</div>
+    <div id="loading-state" class="empty">Loading…</div>
+  </div>
+
+</main>
+
+<!-- Detail panel overlay -->
+<div id="panel-overlay" onclick="closePanel()"></div>
+
+<!-- Detail panel -->
+<div id="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title" id="panel-username">—</div>
+      <div class="panel-sub" id="panel-userid">—</div>
+    </div>
+    <button id="panel-close" onclick="closePanel()">✕</button>
+  </div>
+
+  <div class="panel-tabs">
+    <button class="tab-btn active" onclick="switchTab('actions')">Actions</button>
+    <button class="tab-btn" onclick="switchTab('profile')">Profile</button>
+    <button class="tab-btn" onclick="switchTab('chat')">Chat</button>
+  </div>
+
+  <!-- Actions tab -->
+  <div id="tab-actions">
+    <div class="panel-actions">
+
+      <div class="action-row">
+        <div>
+          <div class="action-label">Verify email</div>
+          <div class="action-desc">Force mark email as verified</div>
+        </div>
+        <button class="btn btn-ok" onclick="doVerify()">Verify</button>
+      </div>
+
+      <div class="action-row">
+        <div>
+          <div class="action-label">Add credits</div>
+          <div class="action-desc">Add USD to API balance</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="action-input" id="credit-amount" type="number" min="0.1" max="1000" step="0.5" value="5"/>
+          <button class="btn btn-ok" onclick="doAddCredits()">Add $</button>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <div>
+          <div class="action-label">Change plan</div>
+          <div class="action-desc">Override subscription tier</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="tier-select" style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:var(--font);padding:6px 10px;border-radius:8px;outline:none;">
+            <option value="free">Free</option>
+            <option value="pro">Pro</option>
+            <option value="premium">Premium</option>
+          </select>
+          <button class="btn btn-ok" onclick="doSetTier()">Set</button>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <div>
+          <div class="action-label">Reset memories</div>
+          <div class="action-desc">Wipe self-core, chat history, embeddings — account stays</div>
+        </div>
+        <button class="btn btn-warn" onclick="doReset()">Reset</button>
+      </div>
+
+      <div class="action-row">
+        <div>
+          <div class="action-label">Delete account</div>
+          <div class="action-desc">Permanently remove user and all data</div>
+        </div>
+        <button class="btn btn-danger" onclick="doDelete()">Delete</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Profile tab -->
+  <div id="tab-profile" style="display:none">
+
+    <!-- Relationship stage -->
+    <div class="panel-section">
+      <div class="panel-section-title">Relationship Stage</div>
+      <div class="stage-track" id="stage-track">
+        <div class="stage-step" data-stage="stranger">Stranger</div>
+        <div class="stage-step" data-stage="acquaintance">Acquaintance</div>
+        <div class="stage-step" data-stage="friend">Friend</div>
+        <div class="stage-step" data-stage="close">Close</div>
+        <div class="stage-step" data-stage="intimate">Intimate</div>
+      </div>
+      <div id="stage-meta" style="font-size:12px;color:var(--text-muted);margin-top:6px"></div>
+    </div>
+
+    <!-- Personality (OCEAN) -->
+    <div class="panel-section">
+      <div class="panel-section-title">Personality (OCEAN)</div>
+      <div id="ocean-bars"></div>
+    </div>
+
+    <!-- Mood (PAD) -->
+    <div class="panel-section">
+      <div class="panel-section-title">Current Mood</div>
+      <div class="pad-row" id="pad-row">
+        <div class="pad-card"><div class="pad-label">Valence</div><div class="pad-val neu" id="pad-v">—</div></div>
+        <div class="pad-card"><div class="pad-label">Arousal</div><div class="pad-val neu" id="pad-a">—</div></div>
+        <div class="pad-card"><div class="pad-label">Dominance</div><div class="pad-val neu" id="pad-d">—</div></div>
+      </div>
+    </div>
+
+    <!-- Facts -->
+    <div class="panel-section" id="facts-section">
+      <div class="panel-section-title">What Anjo Knows</div>
+      <div class="fact-chips" id="fact-chips"><span class="muted" style="font-size:13px">No facts yet.</span></div>
+    </div>
+
+    <!-- Emotional residue -->
+    <div class="panel-section" id="residue-section" style="display:none">
+      <div class="panel-section-title">Emotional Residue</div>
+      <div id="residue-list"></div>
+    </div>
+
+    <!-- Notes & Desires -->
+    <div class="panel-section" id="notes-section" style="display:none">
+      <div class="panel-section-title">Notes & Desires</div>
+      <div id="notes-list"></div>
+    </div>
+
+    <!-- Recent reflections -->
+    <div class="panel-section" id="reflections-section" style="display:none">
+      <div class="panel-section-title">Recent Reflections</div>
+      <div id="reflections-list"></div>
+    </div>
+
+    <!-- Journal -->
+    <div class="panel-section" id="journal-section" style="display:none">
+      <div class="panel-section-title">Journal Snapshot</div>
+      <div class="journal-block" id="journal-block"></div>
+    </div>
+
+    <div id="profile-empty" class="empty" style="display:none">No profile data yet.</div>
+  </div>
+
+  <!-- Chat History tab -->
+  <div id="tab-chat" style="display:none">
+    <div class="panel-section">
+      <div class="panel-section-title" id="chat-count-label">Last 50 messages</div>
+      <div id="chat-list" class="chat-list">
+        <div class="empty">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+  let _key    = '';
+  let _data   = null;
+  let _tick   = 30;
+  let _timer  = null;
+  let _panelUid  = null;
+  let _activeTab = 'actions';
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
+  async function tryKey() {
+    const k = document.getElementById('key-input').value.trim();
+    if (!k) return;
+    const r = await fetch('/api/admin/users', { headers: { 'X-Admin-Key': k } });
+    if (r.ok) {
+      _key  = k;
+      _data = await r.json();
+      show();
+    } else {
+      document.getElementById('auth-error').textContent = 'Invalid key.';
+    }
+  }
+
+  function show() {
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('main').style.display = '';
+    renderStats();
+    render();
+    startTick();
+  }
+
+  // ── Data ─────────────────────────────────────────────────────────────────
+
+  async function load() {
+    if (!_key) return;
+    try {
+      const r = await fetch('/api/admin/users', { headers: { 'X-Admin-Key': _key } });
+      if (r.status === 401) { _key = ''; location.reload(); return; }
+      if (!r.ok) return;
+      _data = await r.json();
+      document.getElementById('loading-state').style.display = 'none';
+      renderStats();
+      render();
+    } catch (e) { console.error(e); }
+    _tick = 30;
+  }
+
+  // ── Render stats ─────────────────────────────────────────────────────────
+
+  function renderStats() {
+    if (!_data) return;
+    document.getElementById('s-total').textContent   = _data.total;
+    document.getElementById('s-active').textContent  = _data.active_sessions;
+    document.getElementById('s-subs').textContent     = _data.subscribers;
+    document.getElementById('s-balance').textContent  = '$' + _data.total_balance.toFixed(2);
+  }
+
+  // ── Render table ─────────────────────────────────────────────────────────
+
+  function render() {
+    if (!_data) return;
+    const q    = (document.getElementById('search').value || '').toLowerCase();
+    const rows = _data.users.filter(u =>
+      !q || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    );
+
+    document.getElementById('user-count').textContent =
+      rows.length + ' user' + (rows.length !== 1 ? 's' : '');
+    document.getElementById('empty-state').style.display  = rows.length ? 'none' : '';
+    document.getElementById('loading-state').style.display = 'none';
+
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = rows.map(u => {
+      const init     = (u.username[0] || '?').toUpperCase();
+      const tier     = u.tier || 'free';
+      const tierCls  = { premium: 'badge-premium', pro: 'badge-pro' }[tier] || 'badge-free';
+      const pct      = u.daily_limit > 0 ? (u.daily_used / u.daily_limit) * 100 : 0;
+      const fillCls  = pct >= 100 ? 'crit' : pct >= 80 ? 'warn' : '';
+      const joined   = u.created_at
+        ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : '—';
+      const sizeStr  = u.data_size_kb < 1024
+        ? u.data_size_kb + ' KB'
+        : (u.data_size_kb / 1024).toFixed(1) + ' MB';
+      const uid = u.user_id;
+
+      return `<tr>
+        <td>
+          <div class="user-cell">
+            <div class="avatar">${init}</div>
+            <div>
+              <div class="u-name">${esc(u.username)}</div>
+              <div class="u-id">${uid.slice(0, 8)}…</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-size:13px;margin-bottom:4px">${esc(u.email) || '<span class="muted">—</span>'}</div>
+          <span class="badge ${u.email_verified ? 'badge-verified' : 'badge-unverified'}">
+            ${u.email_verified ? 'verified' : 'unverified'}
+          </span>
+        </td>
+        <td><span class="badge ${tierCls}">${tier}</span></td>
+        <td>
+          <div class="bar-wrap">
+            <div class="bar-label">${u.daily_used} / ${u.daily_limit}</div>
+            <div class="bar-track">
+              <div class="bar-fill ${fillCls}" style="width:${Math.min(pct, 100)}%"></div>
+            </div>
+          </div>
+        </td>
+        <td class="mono">$${u.balance_usd.toFixed(4)}</td>
+        <td class="mono">${u.message_credits}</td>
+        <td>
+          <div class="data-row">
+            <div><span class="dot ${u.has_self_core ? 'dot-on' : 'dot-off'}"></span>Self-core</div>
+            <div><span class="dot ${u.has_memories  ? 'dot-on' : 'dot-off'}"></span>Memories</div>
+            <div><span class="dot ${u.chat_count > 0 ? 'dot-on' : 'dot-off'}"></span>${u.chat_count} msgs</div>
+            <div class="muted" style="font-size:11px;margin-top:2px">${sizeStr}</div>
+          </div>
+        </td>
+        <td>
+          ${u.is_active
+            ? '<span class="badge badge-live">● Live</span>'
+            : '<span class="muted" style="font-size:12px">Offline</span>'}
+        </td>
+        <td class="muted" style="font-size:13px;white-space:nowrap">${joined}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-view btn-open-panel" data-uid="${uid}" data-tab="profile">Profile</button>
+            <button class="btn btn-view btn-open-panel" data-uid="${uid}" data-tab="chat">Chat</button>
+            <button class="btn btn-view btn-open-panel" data-uid="${uid}" data-tab="actions">Manage</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function esc(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+  }
+
+  // ── Panel ─────────────────────────────────────────────────────────────────
+
+  function openPanel(uid, username, tab) {
+    _panelUid = uid;
+    document.getElementById('panel-username').textContent = username;
+    document.getElementById('panel-userid').textContent   = uid;
+
+    // Set tier select to current value
+    const user = _data?.users.find(u => u.user_id === uid);
+    if (user) {
+      document.getElementById('tier-select').value = user.tier || 'free';
+    }
+
+    document.getElementById('panel-overlay').style.display = 'block';
+    requestAnimationFrame(() => document.getElementById('panel').classList.add('open'));
+
+    switchTab(tab || 'actions');
+  }
+
+  function closePanel() {
+    document.getElementById('panel').classList.remove('open');
+    document.getElementById('panel-overlay').style.display = 'none';
+    _panelUid = null;
+  }
+
+  function switchTab(tab) {
+    _activeTab = tab;
+    ['actions','profile','chat'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', ['actions','profile','chat'][i] === tab);
+    });
+    if (tab === 'chat')    loadChat();
+    if (tab === 'profile') loadProfile();
+  }
+
+  // ── Chat history ──────────────────────────────────────────────────────────
+
+  async function loadChat() {
+    if (!_panelUid) return;
+    const el = document.getElementById('chat-list');
+    el.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const r = await fetch(`/api/admin/users/${_panelUid}/chat?n=100`, {
+        headers: { 'X-Admin-Key': _key }
+      });
+      const d = await r.json();
+      document.getElementById('chat-count-label').textContent =
+        `Last ${d.total} messages`;
+      if (!d.messages.length) {
+        el.innerHTML = '<div class="empty">No chat history.</div>';
+        return;
+      }
+      el.innerHTML = d.messages.map(m => {
+        const role = ['user', 'assistant'].includes(m.role) ? m.role : 'user';
+        const text = esc(m.content || m.text || JSON.stringify(m));
+        return `<div class="chat-msg ${role}">
+          <div class="chat-role ${role}">${role}</div>
+          <div class="chat-text">${text}</div>
+        </div>`;
+      }).join('');
+      // scroll to bottom
+      el.scrollTop = el.scrollHeight;
+    } catch(e) {
+      el.innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  // ── Profile ───────────────────────────────────────────────────────────────
+
+  const OCEAN_META = {
+    O: { name: 'Openness',          trait: 'curiosity & creativity' },
+    C: { name: 'Conscientiousness', trait: 'order & discipline' },
+    E: { name: 'Extraversion',      trait: 'energy & sociability' },
+    A: { name: 'Agreeableness',     trait: 'warmth & cooperation' },
+    N: { name: 'Neuroticism',       trait: 'emotional sensitivity' },
+  };
+  const STAGES = ['stranger','acquaintance','friend','close','intimate'];
+
+  async function loadProfile() {
+    if (!_panelUid) return;
+    try {
+      const r = await fetch(`/api/admin/users/${_panelUid}/profile`, {
+        headers: { 'X-Admin-Key': _key }
+      });
+      const d = await r.json();
+
+      if (!d.core) {
+        document.getElementById('profile-empty').style.display = '';
+        return;
+      }
+      document.getElementById('profile-empty').style.display = 'none';
+
+      const core = d.core;
+      const rel  = core.relationship || {};
+      const p    = core.personality  || {};
+      const mood = core.mood         || {};
+
+      // Stage track
+      const currentStage = rel.stage || 'stranger';
+      const stageIdx = STAGES.indexOf(currentStage);
+      document.querySelectorAll('.stage-step').forEach((el, i) => {
+        el.className = 'stage-step' + (i === stageIdx ? ' active' : i < stageIdx ? ' past' : '');
+      });
+      const sessions = rel.session_count || 0;
+      const sig      = (rel.cumulative_significance || 0).toFixed(1);
+      const trust    = ((rel.trust_score || 0) * 100).toFixed(0);
+      document.getElementById('stage-meta').textContent =
+        `${sessions} session${sessions !== 1 ? 's' : ''} · significance ${sig} · trust ${trust}%` +
+        (rel.opinion_of_user ? ` · "${rel.opinion_of_user}"` : '');
+
+      // OCEAN bars
+      const barsEl = document.getElementById('ocean-bars');
+      barsEl.innerHTML = Object.entries(OCEAN_META).map(([k, meta]) => {
+        const val = p[k] ?? 0;
+        const pct = (val * 100).toFixed(0);
+        return `<div class="ocean-bar">
+          <div class="ocean-label">
+            <span class="ocean-name">${meta.name}</span>
+            <span class="ocean-trait">${meta.trait}</span>
+            <span class="ocean-val">${pct}%</span>
+          </div>
+          <div class="ocean-track">
+            <div class="ocean-fill" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+      }).join('');
+
+      // PAD mood
+      function padClass(v) { return v > 0.1 ? 'pos' : v < -0.1 ? 'neg' : 'neu'; }
+      function padFmt(v)   { return (v >= 0 ? '+' : '') + (v ?? 0).toFixed(2); }
+      const mv = mood.valence ?? 0, ma = mood.arousal ?? 0, md = mood.dominance ?? 0;
+      document.getElementById('pad-v').textContent = padFmt(mv);
+      document.getElementById('pad-v').className   = 'pad-val ' + padClass(mv);
+      document.getElementById('pad-a').textContent = padFmt(ma);
+      document.getElementById('pad-a').className   = 'pad-val ' + padClass(ma);
+      document.getElementById('pad-d').textContent = padFmt(md);
+      document.getElementById('pad-d').className   = 'pad-val ' + padClass(md);
+
+      // Facts
+      const facts = d.facts || [];
+      const chipsEl = document.getElementById('fact-chips');
+      chipsEl.innerHTML = facts.length
+        ? facts.map(f => `<span class="fact-chip">${esc(f)}</span>`).join('')
+        : '<span class="muted" style="font-size:13px">No facts yet.</span>';
+
+      // Emotional residue
+      const residue = core.emotional_residue || [];
+      const residueSection = document.getElementById('residue-section');
+      if (residue.length) {
+        residueSection.style.display = '';
+        document.getElementById('residue-list').innerHTML = residue.map(r => `
+          <div class="residue-item">
+            <div class="residue-header">
+              <span class="residue-emotion">${esc(r.emotion)}</span>
+              <span class="residue-intensity">${(r.intensity * 100).toFixed(0)}% intensity</span>
+            </div>
+            <div class="residue-source">"${esc(r.source)}"</div>
+          </div>`).join('');
+      } else {
+        residueSection.style.display = 'none';
+      }
+
+      // Notes & desires
+      const notes   = core.notes || [];
+      const desires = core.relational_desires || [];
+      const notesSection = document.getElementById('notes-section');
+      if (notes.length || desires.length) {
+        notesSection.style.display = '';
+        const notesEl = document.getElementById('notes-list');
+        notesEl.innerHTML = '';
+        if (desires.length) {
+          notesEl.innerHTML += `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px">Desires</div>` +
+            desires.map(d => `<div class="note-item">→ ${esc(d)}</div>`).join('');
+        }
+        if (notes.length) {
+          notesEl.innerHTML += `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:10px 0 6px">Notes</div>` +
+            notes.map(n => `<div class="note-item">${esc(n)}</div>`).join('');
+        }
+      } else {
+        notesSection.style.display = 'none';
+      }
+
+      // Recent reflections
+      const refs = d.reflections || [];
+      const refsSection = document.getElementById('reflections-section');
+      if (refs.length) {
+        refsSection.style.display = '';
+        document.getElementById('reflections-list').innerHTML = refs.reverse().map(rf => {
+          const date = rf.timestamp ? new Date(rf.timestamp).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
+          return `<div class="reflection-item">
+            <div class="reflection-header">
+              <span class="reflection-tone">${esc(rf.emotional_tone || '—')}</span>
+              <span class="reflection-date">${date} · ${rf.message_count ?? 0} msgs · sig ${(rf.significance ?? 0).toFixed(2)}</span>
+            </div>
+            ${rf.summary ? `<div class="reflection-summary">${esc(rf.summary)}</div>` : ''}
+          </div>`;
+        }).join('');
+      } else {
+        refsSection.style.display = 'none';
+      }
+
+      // Journal
+      const journalSection = document.getElementById('journal-section');
+      if (d.journal) {
+        journalSection.style.display = '';
+        document.getElementById('journal-block').textContent = d.journal;
+      } else {
+        journalSection.style.display = 'none';
+      }
+
+    } catch(e) {
+      document.getElementById('profile-empty').style.display = '';
+      document.getElementById('profile-empty').textContent = 'Failed to load profile.';
+    }
+  }
+
+  // ── Admin actions ─────────────────────────────────────────────────────────
+
+  async function adminPost(path, params) {
+    let url = path;
+    if (params) url += '?' + new URLSearchParams(params).toString();
+    const r = await fetch(url, { method: 'POST', headers: { 'X-Admin-Key': _key } });
+    return r;
+  }
+
+  async function doVerify() {
+    if (!_panelUid) return;
+    const r = await adminPost(`/api/admin/users/${_panelUid}/verify`);
+    if (r.ok) { toast('Email verified', 'ok'); load(); }
+    else toast('Failed', 'err');
+  }
+
+  async function doAddCredits() {
+    if (!_panelUid) return;
+    const amount = parseFloat(document.getElementById('credit-amount').value);
+    if (!amount || amount <= 0) return;
+    const r = await adminPost(`/api/admin/users/${_panelUid}/credits`, { amount });
+    const d = await r.json();
+    if (r.ok) { toast(`Balance now $${d.balance_usd.toFixed(4)}`, 'ok'); load(); }
+    else toast('Failed', 'err');
+  }
+
+  async function doSetTier() {
+    if (!_panelUid) return;
+    const tier = document.getElementById('tier-select').value;
+    const r = await adminPost(`/api/admin/users/${_panelUid}/tier`, { tier });
+    if (r.ok) { toast(`Tier set to ${tier}`, 'ok'); load(); }
+    else toast('Failed', 'err');
+  }
+
+  async function doReset() {
+    if (!_panelUid) return;
+    if (!confirm('Reset all memories and self-core for this user? Account stays.')) return;
+    const r = await adminPost(`/api/admin/users/${_panelUid}/reset`);
+    if (r.ok) { toast('Data reset', 'ok'); load(); }
+    else toast('Failed', 'err');
+  }
+
+  async function doDelete() {
+    if (!_panelUid) return;
+    const name = document.getElementById('panel-username').textContent;
+    if (!confirm(`Permanently delete account "${name}"? This cannot be undone.`)) return;
+    const r = await fetch(`/api/admin/users/${_panelUid}`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Key': _key }
+    });
+    if (r.ok) { toast('Account deleted', 'ok'); closePanel(); load(); }
+    else toast('Failed', 'err');
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+
+  let _toastTimer = null;
+  function toast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show ' + (type || '');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+  }
+
+  // ── Countdown ────────────────────────────────────────────────────────────
+
+  function startTick() {
+    _tick = 30;
+    clearInterval(_timer);
+    _timer = setInterval(() => {
+      _tick--;
+      document.getElementById('countdown').textContent = `Auto-refresh in ${_tick}s`;
+      if (_tick <= 0) load();
+    }, 1000);
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+
+  document.getElementById('auth-gate').style.display = 'flex';
+  document.getElementById('loading-state').style.display = 'none';
+
+  document.getElementById('key-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryKey();
+  });
+
+  // Event delegation for table row panel buttons — never embed user data in onclick
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-open-panel');
+    if (!btn) return;
+    const uid = btn.dataset.uid;
+    const tab = btn.dataset.tab;
+    if (!uid || !tab) return;
+    const user = _data?.users.find(u => u.user_id === uid);
+    const username = user?.username ?? uid;
+    openPanel(uid, username, tab);
+  });
+</script>
+</body>
+</html>

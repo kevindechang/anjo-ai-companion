@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anjo — Privacy Policy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d0f; --surface: #1a1918; --border: #363432;
+      --accent: #c9a96e; --text: #e6e2dc; --muted: #887f76;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 16px; line-height: 1.7;
+    }
+    nav {
+      padding: 20px 32px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-size: 20px; font-weight: 600; letter-spacing: -0.02em; text-decoration: none;
+      background: linear-gradient(135deg, var(--accent), #d4b896);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    nav a.back { color: var(--muted); font-size: 14px; text-decoration: none; }
+    nav a.back:hover { color: var(--text); }
+    .content {
+      max-width: 680px; margin: 0 auto; padding: 64px 24px 100px;
+    }
+    .updated {
+      font-size: 13px; color: var(--muted); margin-bottom: 48px;
+    }
+    h1 { font-size: 36px; font-weight: 300; letter-spacing: -0.02em; margin-bottom: 8px; }
+    h2 {
+      font-size: 18px; font-weight: 500; letter-spacing: -0.01em;
+      margin-top: 48px; margin-bottom: 12px; color: var(--accent);
+    }
+    p { color: #c8c0b4; margin-bottom: 16px; }
+    ul { color: #c8c0b4; padding-left: 20px; margin-bottom: 16px; }
+    li { margin-bottom: 6px; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+    footer { text-align: center; padding: 32px 24px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Anjo</a>
+  <a class="back" href="/">← Back</a>
+</nav>
+
+<div class="content">
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: April 2026</p>
+
+  <p>Anjo is an AI companion. We collect and use data to make the companion work. This policy explains exactly what we collect, why, and what control you have over it.</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Account data</strong> — username, email address, hashed password. We never store your plain-text password.</li>
+    <li><strong>Conversation data</strong> — the messages you send and receive. These are stored on our servers and used to display your chat history, build memory, and generate personality embeddings.</li>
+    <li><strong>Usage data</strong> — daily message counts and subscription status, used to enforce tier limits.</li>
+    <li><strong>Billing data</strong> — payment is processed by FastSpring. We store only your FastSpring account ID and subscription status. We never see or store your card details. FastSpring's privacy policy governs their handling of payment data.</li>
+    <li><strong>Device data</strong> — IP address, browser type, and device identifiers for security and fraud prevention.</li>
+  </ul>
+
+  <h2>What we do not collect</h2>
+  <ul>
+    <li>We do not sell your personal data to third parties.</li>
+    <li><strong>We never use your conversations for advertising or to train third-party AI models.</strong></li>
+    <li>We do not run ads or share conversation data with advertisers.</li>
+    <li>By default, no human can read your conversation history — it is only accessed by automated systems for memory retrieval and response generation.</li>
+    <li>In rare cases (e.g., technical troubleshooting with your explicit permission), authorized staff may access conversation data to resolve issues. This access is logged and limited to senior engineers.</li>
+  </ul>
+
+  <h2>How we use your data</h2>
+  <ul>
+    <li>To generate responses through our AI provider (Anthropic). Your messages are sent to Anthropic's API to produce replies. Anthropic's privacy policy governs their handling of API data.</li>
+    <li>To build persistent memory — summaries and embeddings of your conversations are stored locally and retrieved to give Anjo context in future sessions.</li>
+    <li>To maintain your account and subscription.</li>
+    <li>To send transactional emails (email verification, password reset). We use Resend for email delivery.</li>
+  </ul>
+
+  <h2>Data storage</h2>
+  <p>Your data is stored on servers in the US. Conversation messages are stored in a database on our servers and are visible to you in the chat. Memory embeddings and session summaries are also stored in a vector database (ChromaDB) per user. Account data, subscription status, and usage metrics are stored in a database on our servers.</p>
+
+  <h2>Your rights</h2>
+  <ul>
+    <li><strong>Forget me</strong> — from inside the app, you can ask Anjo to erase your conversation history and memory at any time. This is negotiated with Anjo and processed immediately.</li>
+    <li><strong>Delete account</strong> — you can permanently delete your account and all associated data from the app settings. This is irreversible.</li>
+    <li><strong>Data export</strong> — to request a copy of your data, email us at <a href="mailto:support@your-domain.com">support@your-domain.com</a>.</li>
+  </ul>
+
+  <h2>Your rights (GDPR & CCPA)</h2>
+  <p>If you are in the EU, UK, or California, you have additional legal rights:</p>
+  <ul>
+    <li><strong>Right to access</strong> — request a copy of all personal data we hold about you</li>
+    <li><strong>Right to correction</strong> — request correction of inaccurate personal data</li>
+    <li><strong>Right to deletion</strong> — request erasure of your personal data ("right to be forgotten")</li>
+    <li><strong>Right to data portability</strong> — request your data in a machine-readable format</li>
+    <li><strong>Right to object</strong> — object to processing based on legitimate interests</li>
+    <li><strong>Right to restrict processing</strong> — request limitation on how we process your data</li>
+    <li><strong>CCPA (California)</strong> — request disclosure of categories of data collected, request deletion, and opt-out of "sale" of personal data</li>
+  </ul>
+  <p>To exercise any of these rights, email <a href="mailto:support@your-domain.com">support@your-domain.com</a>. We will respond within 30 days.</p>
+
+  <h2>Cookies</h2>
+  <p>We use a single authentication cookie (<code>anjo_auth</code>) to keep you signed in. This is a strictly necessary cookie for the service to function. We do not use tracking cookies, advertising cookies, or analytics cookies.</p>
+  <p>By using Anjo, you consent to this essential cookie. You can delete it by logging out, which will clear your session.</p>
+
+  <h2>Data retention</h2>
+  <ul>
+    <li><strong>Active accounts</strong> — your data is retained as long as your account is active</li>
+    <li><strong>Deleted accounts</strong> — all personal data is permanently deleted within 30 days of account deletion</li>
+    <li><strong>Conversation history</strong> — stored until you delete it or request "forget me"</li>
+    <li><strong>Financial records</strong> — retained for minimum 7 years for tax and legal compliance</li>
+  </ul>
+
+  <h2>Data security</h2>
+  <p>We implement industry-standard security measures including encryption, access controls, and regular security reviews. Passwords are hashed using bcrypt. Session tokens are HMAC-signed with secure secrets.</p>
+
+  <h2>Third-party services</h2>
+  <p>Anjo uses the following third-party services to operate:</p>
+  <ul>
+    <li><strong>Anthropic</strong> — AI language model for generating responses. Your messages are sent to Anthropic's API for processing. <a href="https://www.anthropic.com/privacy" target="_blank">Anthropic Privacy Policy</a></li>
+    <li><strong>FastSpring</strong> — payment processing. <a href="https://fastspring.com/privacy/" target="_blank">FastSpring Privacy Policy</a></li>
+    <li><strong>Resend</strong> — email delivery for transactional emails. <a href="https://resend.com/privacy" target="_blank">Resend Privacy Policy</a></li>
+    <li><strong>AWS</strong> — hosting and infrastructure. Data is stored in US-based data centers.</li>
+  </ul>
+
+  <h2>Adult audience</h2>
+  <p>Anjo is intended for adults (18+) only. We do not knowingly collect data from minors. If you believe a minor has created an account, contact us at <a href="mailto:support@your-domain.com">support@your-domain.com</a>.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>We may update this policy. Material changes will be communicated by email if you have one on file. Continued use of Anjo after changes constitutes acceptance.</p>
+
+  <h2>Contact</h2>
+  <p>Questions? Email us at <a href="mailto:support@your-domain.com">support@your-domain.com</a>.</p>
+</div>
+
+<footer>© 2026 Anjo · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/refund">Refunds</a></footer>
+</body>
+</html>
