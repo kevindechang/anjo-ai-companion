@@ -26,20 +26,21 @@ This scaffold gives you the full infrastructure for a persistent, emotionally-aw
 **Requirements**: Python 3.11+, Node 18+ (for mobile)
 
 ```bash
-# Clone and install
 git clone <your-fork>
 cd anjo-scaffold
-pip install -e ".[test]"
+./setup.sh
+```
 
-# Configure environment
-cp .env.example .env
-# Edit .env and fill in your values
+`setup.sh` checks Python version, creates a virtual environment, installs dependencies, and copies `.env.example` → `.env`.
 
-# Run locally
+Then edit `.env` and start the server:
+
+```bash
+source .venv/bin/activate
 ANJO_ENV=dev uvicorn anjo.dashboard.app:app --reload --port 8000
 ```
 
-Visit `http://localhost:8000` — you should see the landing page.
+Visit `http://localhost:8000`.
 
 ### Run tests
 
@@ -52,16 +53,29 @@ pytest
 ## Architecture Overview
 
 ```
-nginx → Uvicorn
-  → SecurityHeadersMiddleware
-  → CORSMiddleware
-  → RateLimitMiddleware (sliding window, in-memory)
-  → AuthMiddleware (HMAC token verification)
-  → FastAPI routing
-
-Conversation graph (LangGraph):
-  perceive → gate_node ──► [retrieve?] → appraise → respond (SSE stream)
-                       └──► silent (no LLM call)
+                         ┌─────────────────────────────────┐
+React Native (mobile/)   │  FastAPI backend (port 8000)    │
+   ↕ /api/auth/*         │                                 │
+   ↕ /api/chat/* (SSE)   │  nginx → Uvicorn                │
+                         │    → SecurityHeadersMiddleware   │
+Browser (static/)        │    → CORSMiddleware              │
+   ↕ HTTP / SSE          │    → RateLimitMiddleware         │
+                         │    → AuthMiddleware (HMAC)       │
+                         │    → FastAPI routing             │
+                         └────────────┬────────────────────┘
+                                      │
+                         ┌────────────▼────────────────────┐
+                         │  LangGraph conversation graph   │
+                         │                                 │
+                         │  perceive → gate_node ──► retrieve → appraise → respond (SSE)
+                         │                      └──► silent (no LLM call)             │
+                         └────────────┬───────────────────────────────────────────────┘
+                                      │
+               ┌──────────────────────┼──────────────────────┐
+               ▼                      ▼                       ▼
+        SQLite (WAL)           ChromaDB (disk)         JSON files
+        users, credits         semantic + emotion       self_core/
+        subscriptions          memory embeddings        current.json
 ```
 
 See `CLAUDE.md` for detailed architecture documentation and `docs/` for technical deep-dives.
@@ -150,17 +164,15 @@ Copy `.env.example` to `.env` and fill in your values.
 
 ## Mobile Client
 
+`setup.sh` creates `mobile/.env.local` automatically. To start the mobile client:
+
 ```bash
 cd mobile
 npm install
-
-# Set your backend URL
-echo "EXPO_PUBLIC_API_URL=http://localhost:8000" > .env.local
-
 npx expo start
 ```
 
-The mobile app connects to the backend via `/api/auth/*` and `/api/chat/*`.
+The mobile app connects to the backend via `/api/auth/*` and `/api/chat/*`. Update `EXPO_PUBLIC_API_URL` in `mobile/.env.local` if your backend runs on a different address.
 
 ---
 
@@ -180,6 +192,24 @@ Required GitHub secrets: `EC2_SSH_KEY`, `EC2_HOST`, `ANTHROPIC_API_KEY`, `ANJO_A
 - Conversation content is never stored in cleartext — only semantic and emotional embeddings in ChromaDB
 - Admin endpoints expose metadata and tier info, not conversation content
 - Social/multi-agent mode is always opt-in (off by default)
+
+---
+
+## Using with Claude Code
+
+This repo includes `CLAUDE.md` which gives Claude Code full context on the codebase — the architecture, auth model, conversation graph, stub locations, and known limitations.
+
+```bash
+claude    # Start Claude Code — reads CLAUDE.md automatically
+```
+
+Claude Code will understand the full system and can help you implement `prompt_builder.py`, `reflection/engine.py`, and any customizations without needing manual context.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run locally, submit issues, and open pull requests.
 
 ---
 
