@@ -7,6 +7,7 @@ name = "anjo"
 version = "0.1.0"
 description = "Open-source AI companion with persistent memory, personality drift, and emotional intelligence"
 requires-python = ">=3.11"
+license = {text = "AGPL-3.0-or-later"}
 dependencies = [
     "openai>=1.0.0",
     "anthropic>=0.40.0",

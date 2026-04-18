@@ -110,6 +110,10 @@ claude    # Start Claude Code — reads CLAUDE.md automatically
 
 ---
 
+## License
+
+By contributing, you agree your changes will be licensed under [AGPL v3](LICENSE).
+
 ## Questions
 
 Open a discussion or an issue. This is a small project — there's no separate forum.

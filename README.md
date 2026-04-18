@@ -1,7 +1,7 @@
 # Anjo — AI Companion
 
 [![CI](https://github.com/kevinconquerer/anjo-ai-companion/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinconquerer/anjo-ai-companion/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
 > Most AI chatbots reset after every conversation. Anjo doesn't.
@@ -223,4 +223,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome.
 
 ## License
 
-MIT
+[AGPL v3](LICENSE) — free for open source use. If you run this as a network service, your modifications must also be open-sourced under AGPL. For a commercial license without these obligations, open an issue.
