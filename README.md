@@ -1,16 +1,16 @@
 # Anjo — AI Companion
 
-An open-source AI companion that builds a real relationship with each user over time.
+> Most AI chatbots reset after every conversation. Anjo doesn't.
 
-Most AI chatbots reset after every conversation. Anjo doesn't. It remembers what matters, shifts its personality based on your interactions, and reflects after every session to grow. The longer you talk, the more it knows you.
+Anjo remembers what matters, shifts its personality based on your interactions, and reflects after every session to grow. The longer you talk, the more it knows you. This is the full system, open-sourced under MIT.
 
 ---
 
 ## How It Works
 
-### The Relationship Loop
+Every conversation changes Anjo — slightly, deliberately, permanently.
 
-Every conversation changes Anjo — slightly, deliberately, irreversibly.
+### The Relationship Loop
 
 ```mermaid
 flowchart TD
@@ -35,7 +35,7 @@ flowchart TD
     L --> B
 ```
 
-### A Single Conversation Turn
+### Inside a Single Turn
 
 ```mermaid
 flowchart LR
@@ -45,44 +45,29 @@ flowchart LR
     G -- no retrieval needed --> AP[appraise\nOCC emotion update\nstance selection]
     R --> AP
     AP --> RS[respond\nbuild system prompt\nstream Sonnet reply]
-    G -- silent --> SL([no response\nyielded])
+    G -- silent --> SL([no response])
     RS --> O([Streamed reply])
 ```
 
 ---
 
-## What Makes This Different
+## What Makes It Different
 
-| Feature | Typical chatbot | Anjo |
+| | Typical chatbot | Anjo |
 |---|---|---|
-| Memory | None or simple log | Dual-embedding (semantic + emotional) with confidence framing |
-| Personality | Static system prompt | OCEAN traits that drift ±0.25 per user based on interaction |
-| Post-session learning | None | Three-pass reflection: facts → emotions → relationship significance |
-| Emotion | None | OCC appraisal with per-emotion carry and decay across turns |
-| Relationship | Resets every session | Tracks lifecycle stages, detects contradictions, remembers commitments |
+| **Memory** | None or chat log | Dual embeddings — semantic + emotional — with confidence-based framing |
+| **Personality** | Fixed system prompt | OCEAN traits that drift ±0.25 per user, anchored to a frozen baseline |
+| **Learning** | None | Three-pass reflection after every session |
+| **Emotion** | None | OCC appraisal with per-emotion carry and decay across turns |
+| **Relationship** | Resets every session | Lifecycle stages, contradiction detection, remembered commitments |
 
 ---
 
-## What's Inside
+## Getting Started
 
-- **FastAPI backend** — auth, rate limiting, security headers, admin panel, SSE streaming
-- **LangGraph conversation graph** — stateful pipeline with conditional memory retrieval
-- **Personality system** — OCEAN + PAD mood, per-user drift with frozen baseline
-- **Three-pass reflection engine** — extraction → emotional → relational, runs post-session
-- **Dual-embedding memory** — semantic + emotional vectors, skeptical confidence framing
-- **Memory graph** — typed nodes (fact, preference, commitment, thread) with auto-supersession
-- **OCC emotion appraisal** — 9 stances, per-emotion decay, carry across turns
-- **SelfCore** — per-user personality state that evolves across the relationship lifecycle
-- **React Native mobile client** — Expo ~54, SSE streaming chat, story/memory views
-- **Billing** — RevenueCat (subscriptions + credit packs)
-- **Email** — Resend API (verification + password reset)
-- **Deploy scripts** — GitHub Actions CI/CD, nginx, systemd, certbot on EC2
+**Requirements:** Python 3.11+, Node 18+ (for mobile)
 
----
-
-## Quick Start
-
-**Requirements**: Python 3.11+, Node 18+ (for mobile)
+**1. Clone and install**
 
 ```bash
 git clone https://github.com/kevinconquerer/anjo-ai-companion
@@ -90,88 +75,103 @@ cd anjo-ai-companion
 ./setup.sh
 ```
 
-Edit `.env`, then:
+`setup.sh` creates a virtual environment, installs dependencies, and copies `.env.example` → `.env`.
+
+**2. Add your API key**
+
+Open `.env` and set `ANTHROPIC_API_KEY`. Everything else has sensible defaults for local dev.
+
+**3. Start the server**
 
 ```bash
 source .venv/bin/activate
 ANJO_ENV=dev uvicorn anjo.dashboard.app:app --reload --port 8000
 ```
 
-Visit `http://localhost:8000`.
+Visit `http://localhost:8000` and create an account.
+
+**4. Run tests**
 
 ```bash
-pytest   # run tests
+pytest
 ```
 
 ---
 
-## Tech Stack
+## System Overview
 
-| Layer | Technology |
-|---|---|
-| Backend | FastAPI 0.115+ / Python 3.11+ |
-| Conversation | LangGraph (StateGraph) |
-| LLM | Anthropic Claude Sonnet + Haiku |
-| Long-term memory | ChromaDB (local disk) |
-| Personality embeddings | sentence-transformers `all-MiniLM-L6-v2` |
-| Database | SQLite WAL mode |
-| Mobile | React Native / Expo ~54 |
-| Email | Resend API |
-| Billing | RevenueCat |
-| Deploy | EC2 + nginx + systemd + certbot |
+**Core AI**
+- Personality — OCEAN traits + PAD mood with per-user drift and a frozen baseline
+- Reflection engine — three independent LLM passes after each session ends
+- Memory — dual-embedding ChromaDB storage (semantic + emotional vectors)
+- Memory graph — typed nodes with auto-supersession and contradiction detection
+- Emotion — OCC appraisal, 9 mood-driven stances, per-emotion decay across turns
+
+**Infrastructure**
+- FastAPI backend — HMAC auth, rate limiting, security headers, SSE streaming
+- LangGraph conversation graph — stateful pipeline with conditional memory retrieval
+- SQLite (WAL mode) — users, credits, subscriptions
+- SelfCore — per-user personality state persisted as JSON
+
+**Clients**
+- Web — vanilla JS frontend served from `anjo/dashboard/static/`
+- Mobile — React Native / Expo ~54 with SSE streaming chat and story views
+
+**Ops**
+- Email — Resend API (verification + password reset)
+- Billing — RevenueCat (subscriptions + credit packs)
+- Deploy — GitHub Actions CI/CD → EC2, nginx, systemd, certbot
 
 ---
 
-## Environment Variables
+## Configuration
 
-Copy `.env.example` to `.env`.
+```bash
+cp .env.example .env
+```
 
 | Variable | Required | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | Claude API key |
-| `ANJO_SECRET` | Yes | HMAC signing secret — `openssl rand -hex 32` |
+| `ANTHROPIC_API_KEY` | Yes | From [console.anthropic.com](https://console.anthropic.com) |
+| `ANJO_SECRET` | Yes | HMAC signing key — `openssl rand -hex 32` |
 | `ANJO_ADMIN_SECRET` | Yes | Admin panel key |
-| `ANJO_BASE_URL` | Yes | e.g. `https://your-domain.com` |
-| `RESEND_API_KEY` | No | Email (skipped if absent, users auto-verify) |
-| `ANJO_ENV` | No | `dev` for local development |
-| `PAYMENTS_ENABLED` | No | `True` to enable billing |
-| `REVENUECAT_WEBHOOK_SECRET` | No | Required if billing enabled |
+| `ANJO_BASE_URL` | Yes | Your public URL, e.g. `https://your-domain.com` |
+| `ANJO_ENV` | No | Set to `dev` for local development |
+| `RESEND_API_KEY` | No | Email support — users auto-verify if absent |
+| `PAYMENTS_ENABLED` | No | `True` to enable RevenueCat billing |
+| `REVENUECAT_WEBHOOK_SECRET` | No | Required when billing is enabled |
 
 ---
 
 ## Mobile
 
 ```bash
-cd mobile
-npm install
-npx expo start
+cd mobile && npm install && npx expo start
 ```
 
-Update `EXPO_PUBLIC_API_URL` in `mobile/.env.local` to point at your backend.
+Set `EXPO_PUBLIC_API_URL` in `mobile/.env.local` to point at your backend (`http://localhost:8000` for local dev).
 
 ---
 
 ## Deployment
 
-`.github/workflows/` includes push-to-deploy and one-time bootstrap workflows for EC2.
+Push-to-deploy and one-time bootstrap workflows are in `.github/workflows/`.
 
-Required GitHub secrets: `EC2_SSH_KEY`, `EC2_HOST`, `ANTHROPIC_API_KEY`, `ANJO_ADMIN_SECRET`, `RESEND_API_KEY`.
+Add these secrets to your GitHub repo: `EC2_SSH_KEY`, `EC2_HOST`, `ANTHROPIC_API_KEY`, `ANJO_ADMIN_SECRET`, `RESEND_API_KEY`.
+
+See `CLAUDE.md` for the full architecture reference.
 
 ---
 
 ## Privacy
 
-- Conversations are never stored in cleartext — only embeddings in ChromaDB
-- Admin endpoints expose metadata only, not conversation content
-- Multi-agent social mode is opt-in, off by default
+Conversations are never stored in cleartext — only embeddings. Admin endpoints expose metadata, not content. Multi-agent social mode is opt-in and off by default.
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
+See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome.
 
 ## License
 
