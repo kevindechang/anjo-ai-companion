@@ -1,21 +1,23 @@
-# Anjo Scaffold — AI Companion Starter
+# Anjo — AI Companion
 
-Production-ready FastAPI + LangGraph + React Native scaffold for building AI companion apps.
+An open-source AI companion with persistent memory, personality drift, and emotional intelligence.
 
-This scaffold gives you the full infrastructure for a persistent, emotionally-aware AI companion — auth, session management, ChromaDB memory, a LangGraph conversation graph, billing, and a React Native mobile client. You bring the personality: implement two stub functions to define who your companion is and how it grows over time.
+Anjo builds a real relationship with each user over time — remembering what matters, shifting its personality based on interactions, and reflecting after every conversation to grow. This is the full system, open-sourced.
 
 ---
 
-## What's Included
+## What's Inside
 
 - **FastAPI backend** — auth, rate limiting, security headers, admin panel, SSE streaming chat
 - **LangGraph conversation graph** — perceive → gate → retrieve → appraise → respond pipeline
-- **Three-tier memory** — ChromaDB (long-term), per-user journal (working), in-session state (ephemeral)
-- **SelfCore** — Pydantic model for companion personality (OCEAN traits, PAD mood, relationship state)
-- **Reflection engine stub** — post-session learning pipeline (implement your own)
-- **System prompt stub** — personality injection (implement your own)
+- **Personality system** — OCEAN traits + PAD mood with per-user drift (±0.25 from a frozen baseline)
+- **Three-pass reflection engine** — post-session extraction → emotional analysis → relational significance
+- **Dual-embedding memory** — semantic + emotional vectors in ChromaDB, skeptical framing by confidence
+- **Memory graph** — typed nodes (fact, preference, commitment, thread) with auto-supersession and contradiction detection
+- **OCC emotion appraisal** — per-emotion carry and decay across turns, 9 mood-driven stances
+- **SelfCore** — per-user personality state that evolves over the relationship lifecycle
 - **React Native mobile client** — Expo ~54, auth, SSE chat, story/memory views, billing
-- **Billing** — FastSpring integration (subscriptions + credit packs)
+- **Billing** — RevenueCat integration (subscriptions + credit packs)
 - **Email** — Resend API (verification + password reset)
 - **Deploy scripts** — GitHub Actions CI/CD, nginx, systemd, certbot on EC2
 
@@ -26,8 +28,8 @@ This scaffold gives you the full infrastructure for a persistent, emotionally-aw
 **Requirements**: Python 3.11+, Node 18+ (for mobile)
 
 ```bash
-git clone <your-fork>
-cd anjo-scaffold
+git clone https://github.com/kevinconquerer/anjo-ai-companion
+cd anjo-ai-companion
 ./setup.sh
 ```
 
@@ -50,7 +52,7 @@ pytest
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
                          ┌─────────────────────────────────┐
@@ -82,49 +84,19 @@ See `CLAUDE.md` for detailed architecture documentation and `docs/` for technica
 
 ---
 
-## Customization Guide
+## How the Personality System Works
 
-The scaffold ships two intentional stubs that you must implement:
+Anjo's personality is a two-layer system:
 
-### 1. `anjo/core/prompt_builder.py`
+- **Baseline** — frozen Big Five (OCEAN) traits that define who Anjo fundamentally is
+- **Overlay** — per-user drift that shifts ±0.25 from the baseline based on interaction history
 
-```python
-def build_system_prompt(core, retrieved_memories, active_emotions, ...) -> tuple[str, str]:
-    """
-    Define your companion's persona and inject it into every conversation turn.
+Each conversation session runs a three-pass reflection after it ends:
+1. **Extraction pass** — facts, preferences, commitments the user mentioned
+2. **Emotional pass** — how the conversation felt, emotional significance
+3. **Relational pass** — what this means for the relationship arc, whether to advance the relationship stage
 
-    Return (static_block, dynamic_block):
-      - static_block  : stable persona text (prompt-cached by Anthropic)
-      - dynamic_block : per-turn state (mood, memories, session context)
-    """
-    raise NotImplementedError("Implement your companion's system prompt")
-```
-
-This is where your companion's voice, personality, and behavioral guidelines live.
-
-### 2. `anjo/reflection/engine.py`
-
-```python
-def run_reflection(transcript, core, user_id, session_id, ...) -> None:
-    """
-    Analyze the conversation and update the companion's personality state.
-
-    Called after each session ends. Mutates core (OCEAN traits, mood,
-    relationship stage, memories) and saves to disk.
-    """
-    raise NotImplementedError("Implement your reflection engine")
-```
-
-This is how your companion learns and grows from interactions over time.
-
-Both files contain detailed docstrings explaining all available parameters, helper methods on `SelfCore`, and what to write back.
-
-### Other things to customize
-
-- `anjo/dashboard/static/` — Replace the HTML/CSS with your own frontend
-- `mobile/` — Update app name, colors, and branding in `app.json` and theme files
-- `anjo/core/self_core.py` — The SelfCore schema is the data model for companion state. Extend it if you need additional personality dimensions.
-- `anjo/core/emotion.py` — OCC emotion classifier. Keep as-is or replace with your own intent/emotion taxonomy.
+Memory is stored as dual embeddings (semantic + emotional) with confidence-based framing — high-confidence memories surface as "I remember", mid-confidence as "I have a sense", low-confidence are omitted rather than hallucinated.
 
 ---
 
@@ -141,7 +113,7 @@ Both files contain detailed docstrings explaining all available parameters, help
 | Database | SQLite WAL mode |
 | Mobile | React Native / Expo ~54 |
 | Email | Resend API |
-| Billing | FastSpring |
+| Billing | RevenueCat |
 | Deploy | EC2 + nginx + systemd + certbot |
 
 ---
@@ -158,7 +130,8 @@ Copy `.env.example` to `.env` and fill in your values.
 | `ANJO_BASE_URL` | Yes | e.g. `https://your-domain.com` |
 | `RESEND_API_KEY` | No | Email verification/reset (skipped if absent) |
 | `ANJO_ENV` | No | Set to `dev` for local development |
-| `PAYMENTS_ENABLED` | No | Set to `True` to enable FastSpring billing |
+| `PAYMENTS_ENABLED` | No | Set to `True` to enable RevenueCat billing |
+| `REVENUECAT_WEBHOOK_SECRET` | No | Required if `PAYMENTS_ENABLED=True` |
 
 ---
 
@@ -172,7 +145,7 @@ npm install
 npx expo start
 ```
 
-The mobile app connects to the backend via `/api/auth/*` and `/api/chat/*`. Update `EXPO_PUBLIC_API_URL` in `mobile/.env.local` if your backend runs on a different address.
+Update `EXPO_PUBLIC_API_URL` in `mobile/.env.local` if your backend runs on a different address.
 
 ---
 
@@ -197,19 +170,17 @@ Required GitHub secrets: `EC2_SSH_KEY`, `EC2_HOST`, `ANTHROPIC_API_KEY`, `ANJO_A
 
 ## Using with Claude Code
 
-This repo includes `CLAUDE.md` which gives Claude Code full context on the codebase — the architecture, auth model, conversation graph, stub locations, and known limitations.
+This repo includes `CLAUDE.md` which gives Claude Code full context on the architecture, auth model, conversation graph, and design decisions.
 
 ```bash
-claude    # Start Claude Code — reads CLAUDE.md automatically
+claude
 ```
-
-Claude Code will understand the full system and can help you implement `prompt_builder.py`, `reflection/engine.py`, and any customizations without needing manual context.
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run locally, submit issues, and open pull requests.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
