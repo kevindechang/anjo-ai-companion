@@ -1,23 +1,80 @@
 # Anjo — AI Companion
 
-An open-source AI companion with persistent memory, personality drift, and emotional intelligence.
+An open-source AI companion that builds a real relationship with each user over time.
 
-Anjo builds a real relationship with each user over time — remembering what matters, shifting its personality based on interactions, and reflecting after every conversation to grow. This is the full system, open-sourced.
+Most AI chatbots reset after every conversation. Anjo doesn't. It remembers what matters, shifts its personality based on your interactions, and reflects after every session to grow. The longer you talk, the more it knows you.
+
+---
+
+## How It Works
+
+### The Relationship Loop
+
+Every conversation changes Anjo — slightly, deliberately, irreversibly.
+
+```mermaid
+flowchart TD
+    A([User sends message]) --> B[Conversation graph\nperceive → gate → appraise → respond]
+    B --> C([Anjo responds\nstreaming SSE])
+    C --> D{Session ends?}
+    D -- No --> A
+    D -- Yes --> E[Reflection engine\n3 independent passes]
+
+    E --> F[Pass 1: Extract facts\npreferences, commitments]
+    E --> G[Pass 2: Emotional read\nhow the session felt]
+    E --> H[Pass 3: Relational weight\nwhat this means for the relationship]
+
+    F --> I[(ChromaDB\ndual embeddings)]
+    G --> I
+    H --> J[(SelfCore JSON\npersonality state)]
+
+    I --> K[Next conversation:\nAnjo retrieves relevant memories]
+    J --> L[Next conversation:\nAnjo's personality reflects the relationship]
+
+    K --> B
+    L --> B
+```
+
+### A Single Conversation Turn
+
+```mermaid
+flowchart LR
+    M([Message]) --> P[perceive\nparse + classify intent]
+    P --> G[gate node\none Haiku call]
+    G -- needs memory --> R[retrieve\nChromaDB semantic\n+ emotional search]
+    G -- no retrieval needed --> AP[appraise\nOCC emotion update\nstance selection]
+    R --> AP
+    AP --> RS[respond\nbuild system prompt\nstream Sonnet reply]
+    G -- silent --> SL([no response\nyielded])
+    RS --> O([Streamed reply])
+```
+
+---
+
+## What Makes This Different
+
+| Feature | Typical chatbot | Anjo |
+|---|---|---|
+| Memory | None or simple log | Dual-embedding (semantic + emotional) with confidence framing |
+| Personality | Static system prompt | OCEAN traits that drift ±0.25 per user based on interaction |
+| Post-session learning | None | Three-pass reflection: facts → emotions → relationship significance |
+| Emotion | None | OCC appraisal with per-emotion carry and decay across turns |
+| Relationship | Resets every session | Tracks lifecycle stages, detects contradictions, remembers commitments |
 
 ---
 
 ## What's Inside
 
-- **FastAPI backend** — auth, rate limiting, security headers, admin panel, SSE streaming chat
-- **LangGraph conversation graph** — perceive → gate → retrieve → appraise → respond pipeline
-- **Personality system** — OCEAN traits + PAD mood with per-user drift (±0.25 from a frozen baseline)
-- **Three-pass reflection engine** — post-session extraction → emotional analysis → relational significance
-- **Dual-embedding memory** — semantic + emotional vectors in ChromaDB, skeptical framing by confidence
-- **Memory graph** — typed nodes (fact, preference, commitment, thread) with auto-supersession and contradiction detection
-- **OCC emotion appraisal** — per-emotion carry and decay across turns, 9 mood-driven stances
-- **SelfCore** — per-user personality state that evolves over the relationship lifecycle
-- **React Native mobile client** — Expo ~54, auth, SSE chat, story/memory views, billing
-- **Billing** — RevenueCat integration (subscriptions + credit packs)
+- **FastAPI backend** — auth, rate limiting, security headers, admin panel, SSE streaming
+- **LangGraph conversation graph** — stateful pipeline with conditional memory retrieval
+- **Personality system** — OCEAN + PAD mood, per-user drift with frozen baseline
+- **Three-pass reflection engine** — extraction → emotional → relational, runs post-session
+- **Dual-embedding memory** — semantic + emotional vectors, skeptical confidence framing
+- **Memory graph** — typed nodes (fact, preference, commitment, thread) with auto-supersession
+- **OCC emotion appraisal** — 9 stances, per-emotion decay, carry across turns
+- **SelfCore** — per-user personality state that evolves across the relationship lifecycle
+- **React Native mobile client** — Expo ~54, SSE streaming chat, story/memory views
+- **Billing** — RevenueCat (subscriptions + credit packs)
 - **Email** — Resend API (verification + password reset)
 - **Deploy scripts** — GitHub Actions CI/CD, nginx, systemd, certbot on EC2
 
@@ -33,9 +90,7 @@ cd anjo-ai-companion
 ./setup.sh
 ```
 
-`setup.sh` checks Python version, creates a virtual environment, installs dependencies, and copies `.env.example` → `.env`.
-
-Then edit `.env` and start the server:
+Edit `.env`, then:
 
 ```bash
 source .venv/bin/activate
@@ -44,59 +99,9 @@ ANJO_ENV=dev uvicorn anjo.dashboard.app:app --reload --port 8000
 
 Visit `http://localhost:8000`.
 
-### Run tests
-
 ```bash
-pytest
+pytest   # run tests
 ```
-
----
-
-## Architecture
-
-```
-                         ┌─────────────────────────────────┐
-React Native (mobile/)   │  FastAPI backend (port 8000)    │
-   ↕ /api/auth/*         │                                 │
-   ↕ /api/chat/* (SSE)   │  nginx → Uvicorn                │
-                         │    → SecurityHeadersMiddleware   │
-Browser (static/)        │    → CORSMiddleware              │
-   ↕ HTTP / SSE          │    → RateLimitMiddleware         │
-                         │    → AuthMiddleware (HMAC)       │
-                         │    → FastAPI routing             │
-                         └────────────┬────────────────────┘
-                                      │
-                         ┌────────────▼────────────────────┐
-                         │  LangGraph conversation graph   │
-                         │                                 │
-                         │  perceive → gate_node ──► retrieve → appraise → respond (SSE)
-                         │                      └──► silent (no LLM call)             │
-                         └────────────┬───────────────────────────────────────────────┘
-                                      │
-               ┌──────────────────────┼──────────────────────┐
-               ▼                      ▼                       ▼
-        SQLite (WAL)           ChromaDB (disk)         JSON files
-        users, credits         semantic + emotion       self_core/
-        subscriptions          memory embeddings        current.json
-```
-
-See `CLAUDE.md` for detailed architecture documentation and `docs/` for technical deep-dives.
-
----
-
-## How the Personality System Works
-
-Anjo's personality is a two-layer system:
-
-- **Baseline** — frozen Big Five (OCEAN) traits that define who Anjo fundamentally is
-- **Overlay** — per-user drift that shifts ±0.25 from the baseline based on interaction history
-
-Each conversation session runs a three-pass reflection after it ends:
-1. **Extraction pass** — facts, preferences, commitments the user mentioned
-2. **Emotional pass** — how the conversation felt, emotional significance
-3. **Relational pass** — what this means for the relationship arc, whether to advance the relationship stage
-
-Memory is stored as dual embeddings (semantic + emotional) with confidence-based framing — high-confidence memories surface as "I remember", mid-confidence as "I have a sense", low-confidence are omitted rather than hallucinated.
 
 ---
 
@@ -108,7 +113,6 @@ Memory is stored as dual embeddings (semantic + emotional) with confidence-based
 | Conversation | LangGraph (StateGraph) |
 | LLM | Anthropic Claude Sonnet + Haiku |
 | Long-term memory | ChromaDB (local disk) |
-| Short-term memory | In-process session dict |
 | Personality embeddings | sentence-transformers `all-MiniLM-L6-v2` |
 | Database | SQLite WAL mode |
 | Mobile | React Native / Expo ~54 |
@@ -120,24 +124,22 @@ Memory is stored as dual embeddings (semantic + emotional) with confidence-based
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in your values.
+Copy `.env.example` to `.env`.
 
 | Variable | Required | Description |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Yes | Claude API key |
-| `ANJO_SECRET` | Yes | HMAC signing secret — 32+ random bytes in prod |
-| `ANJO_ADMIN_SECRET` | Yes | Admin panel key — use a strong random value |
+| `ANJO_SECRET` | Yes | HMAC signing secret — `openssl rand -hex 32` |
+| `ANJO_ADMIN_SECRET` | Yes | Admin panel key |
 | `ANJO_BASE_URL` | Yes | e.g. `https://your-domain.com` |
-| `RESEND_API_KEY` | No | Email verification/reset (skipped if absent) |
-| `ANJO_ENV` | No | Set to `dev` for local development |
-| `PAYMENTS_ENABLED` | No | Set to `True` to enable RevenueCat billing |
-| `REVENUECAT_WEBHOOK_SECRET` | No | Required if `PAYMENTS_ENABLED=True` |
+| `RESEND_API_KEY` | No | Email (skipped if absent, users auto-verify) |
+| `ANJO_ENV` | No | `dev` for local development |
+| `PAYMENTS_ENABLED` | No | `True` to enable billing |
+| `REVENUECAT_WEBHOOK_SECRET` | No | Required if billing enabled |
 
 ---
 
-## Mobile Client
-
-`setup.sh` creates `mobile/.env.local` automatically. To start the mobile client:
+## Mobile
 
 ```bash
 cd mobile
@@ -145,36 +147,23 @@ npm install
 npx expo start
 ```
 
-Update `EXPO_PUBLIC_API_URL` in `mobile/.env.local` if your backend runs on a different address.
+Update `EXPO_PUBLIC_API_URL` in `mobile/.env.local` to point at your backend.
 
 ---
 
 ## Deployment
 
-GitHub Actions workflows are included in `.github/workflows/`:
-
-- `deploy.yml` — Push-to-deploy: rsync to EC2, inject secrets, restart systemd
-- `bootstrap.yml` — One-time server setup: nginx, certbot, venv, systemd service
+`.github/workflows/` includes push-to-deploy and one-time bootstrap workflows for EC2.
 
 Required GitHub secrets: `EC2_SSH_KEY`, `EC2_HOST`, `ANTHROPIC_API_KEY`, `ANJO_ADMIN_SECRET`, `RESEND_API_KEY`.
 
 ---
 
-## Privacy Design
+## Privacy
 
-- Conversation content is never stored in cleartext — only semantic and emotional embeddings in ChromaDB
-- Admin endpoints expose metadata and tier info, not conversation content
-- Social/multi-agent mode is always opt-in (off by default)
-
----
-
-## Using with Claude Code
-
-This repo includes `CLAUDE.md` which gives Claude Code full context on the architecture, auth model, conversation graph, and design decisions.
-
-```bash
-claude
-```
+- Conversations are never stored in cleartext — only embeddings in ChromaDB
+- Admin endpoints expose metadata only, not conversation content
+- Multi-agent social mode is opt-in, off by default
 
 ---
 
