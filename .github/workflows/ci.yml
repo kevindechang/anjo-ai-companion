@@ -35,5 +35,5 @@ jobs:
           # Tests use conftest.py fixtures — no real keys needed
           ANTHROPIC_API_KEY: test-key
           ANJO_SECRET: test-secret-minimum-32-chars-long-ok
-          ANJO_ADMIN_SECRET: test-admin-secret
+          ANJO_ADMIN_SECRET: test_admin_key
           ANJO_ENV: dev

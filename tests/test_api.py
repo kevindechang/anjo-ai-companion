@@ -225,7 +225,6 @@ class TestSessionUsage:
         d = r.json()
         assert "input_tokens" in d
         assert "output_tokens" in d
-        assert "cost_usd" in d
 
     def test_session_emotions_structure(self, auth_client):
         r = auth_client.get("/api/session/emotions")

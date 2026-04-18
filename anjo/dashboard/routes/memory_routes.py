@@ -21,10 +21,10 @@ def get_memories(user_id: str = Depends(get_current_user_id)):
     from anjo.core.crypto import decrypt_chroma
     from anjo.memory.long_term import _get_collections
 
-    semantic_col, emotional_col = _get_collections()
+    semantic_col, emotional_col = _get_collections(user_id)
 
     def _collection_to_list(col) -> list[dict]:
-        result = col.get(where={"user_id": user_id}, include=["documents", "metadatas"])
+        result = col.get(include=["documents", "metadatas"])
         items = []
         for mem_id, doc, meta in zip(
             result.get("ids", []),
