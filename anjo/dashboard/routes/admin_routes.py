@@ -218,10 +218,10 @@ async def admin_reset_user(user_id: str, request: Request):
     try:
         from anjo.memory.long_term import _get_collections
 
-        semantic_col, emotional_col = _get_collections()
+        semantic_col, emotional_col = _get_collections(user_id)
         for col in (semantic_col, emotional_col):
             try:
-                ids = col.get(where={"user_id": user_id}, include=[])["ids"]
+                ids = col.get(include=[])["ids"]
                 if ids:
                     col.delete(ids=ids)
             except Exception as e:

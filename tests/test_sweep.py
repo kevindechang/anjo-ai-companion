@@ -32,54 +32,40 @@ class TestAdminResetUserScope:
         return next(u["user_id"] for u in users if u["username"] == username)
 
     def test_reset_user_A_does_not_delete_user_B_vectors(self, client, tmp_path):
-        """After resetting user_A, a mock of ChromaDB's delete must only be called
-        with user_A's filter, never user_B's."""
+        """After resetting user_A, _get_collections must be called with user_A's id only,
+        never user_B's (per-user collections enforce scope at the collection level)."""
         uid_a = self._register_and_get_uid(client, "reset_user_a", "reset_a@test.com")
         uid_b = self._register_and_get_uid(client, "reset_user_b", "reset_b@test.com")
 
-        deleted_where_filters = []
+        called_with_ids = []
 
-        def fake_get(where, include):
-            return {"ids": [f"{where['user_id']}_vec1"]}
+        def fake_get_collections(user_id):
+            called_with_ids.append(user_id)
+            col = MagicMock()
+            col.get.return_value = {"ids": [f"{user_id}_vec1"]}
+            col.name = f"sem_{user_id}"
+            return col, col
 
-        def fake_delete(ids):
-            # record which user_id was targeted via the ids that were returned
-            deleted_where_filters.extend(ids)
-
-        mock_col = MagicMock()
-        mock_col.get.side_effect = fake_get
-        mock_col.delete.side_effect = fake_delete
-        mock_col.name = "test_collection"
-
-        with patch("anjo.memory.long_term._get_collections", return_value=(mock_col, mock_col)):
+        with patch("anjo.memory.long_term._get_collections", side_effect=fake_get_collections):
             r = client.post(
                 f"/api/admin/users/{uid_a}/reset",
                 headers={"X-Admin-Key": "test_admin_key"},
             )
 
         assert r.status_code == 200
-        # The only vector IDs deleted should belong to uid_a, not uid_b
-        for deleted_id in deleted_where_filters:
-            assert uid_b not in deleted_id, f"user_B's vector id found in delete call: {deleted_id}"
-        assert any(uid_a in deleted_id for deleted_id in deleted_where_filters), (
-            "user_A's vectors were never deleted"
-        )
+        # _get_collections must only have been invoked with uid_a
+        assert uid_b not in called_with_ids, f"user_B's id passed to _get_collections: {called_with_ids}"
+        assert uid_a in called_with_ids, "user_A's id was never passed to _get_collections"
 
     def test_reset_user_A_does_delete_user_A_vectors(self, client):
-        """After resetting user_A, ChromaDB delete IS called with user_A's filter."""
+        """After resetting user_A, ChromaDB delete IS called on user_A's collection."""
         uid_a = self._register_and_get_uid(client, "reset_only_a", "only_a@test.com")
 
         delete_called_with = []
 
-        def fake_get(where, include):
-            return {"ids": [f"vec_{where['user_id']}_1"]}
-
-        def fake_delete(ids):
-            delete_called_with.extend(ids)
-
         mock_col = MagicMock()
-        mock_col.get.side_effect = fake_get
-        mock_col.delete.side_effect = fake_delete
+        mock_col.get.return_value = {"ids": [f"vec_{uid_a}_1"]}
+        mock_col.delete.side_effect = lambda ids: delete_called_with.extend(ids)
         mock_col.name = "semantic"
 
         with patch("anjo.memory.long_term._get_collections", return_value=(mock_col, mock_col)):

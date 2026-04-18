@@ -256,20 +256,20 @@ def delete_account(user_id: str) -> None:
     import shutil
 
     db = get_db()
-    for table in ("daily_usage", "facts", "letter_cache", "credits", "subscriptions", "users"):
+    for table in ("messages", "facts", "letter_cache", "active_sessions", "memory_graph", "users"):
         db.execute(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))  # noqa: S608
     db.commit()
     user_dir = _DATA_ROOT / "users" / user_id
     if user_dir.exists():
         shutil.rmtree(user_dir)
-    # Wipe ChromaDB vectors (global collection, filtered by user_id)
+    # Wipe ChromaDB vectors (per-user collections)
     try:
         from anjo.memory.long_term import _get_collections
 
-        semantic_col, emotional_col = _get_collections()
+        semantic_col, emotional_col = _get_collections(user_id)
         for col in (semantic_col, emotional_col):
             try:
-                ids = col.get(where={"user_id": user_id}, include=[])["ids"]
+                ids = col.get(include=[])["ids"]
                 if ids:
                     col.delete(ids=ids)
             except Exception as e:
