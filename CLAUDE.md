@@ -63,7 +63,7 @@ pytest tests/test_auth.py::TestLogin::test_login_success -v
 | Database | SQLite in WAL mode (`data/anjo.db`) — per-thread connections |
 | Mobile client | React Native / Expo ~54 (`mobile/` directory) |
 | Email | Resend API |
-| Billing | FastSpring (`PAYMENTS_ENABLED=True`) |
+| Billing | RevenueCat (`PAYMENTS_ENABLED=True`) |
 
 ---
 
@@ -232,7 +232,7 @@ All routes are in `anjo/dashboard/routes/`:
 | `self_core_routes.py` | `/api` | SelfCore read/update |
 | `memory_routes.py` | `/api` | Memory retrieval endpoints |
 | `story_routes.py` | `/api` | Story / memory narrative endpoints |
-| `billing_routes.py` | `/api` | FastSpring billing (subscriptions + credit packs) |
+| `billing_routes.py` | `/api` | RevenueCat billing (subscriptions + credit packs) |
 
 ### Input Validation Rules
 

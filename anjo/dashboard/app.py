@@ -103,9 +103,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://d1f8f9xcsvx3ha.cloudfront.net; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https://*.onfastspring.com; "
-            "connect-src 'self' https://api.fastspring.com https://*.onfastspring.com; "
-            "frame-src https://*.onfastspring.com; "
+            "img-src 'self' data:; "
+            "connect-src 'self'; "
+            "frame-src 'none'; "
             "frame-ancestors 'none';"
         )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

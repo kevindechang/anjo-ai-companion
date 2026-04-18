@@ -23,7 +23,7 @@ from anjo.core.credits import get_message_credits, add_message_credits
 
 router = APIRouter()
 
-PAYMENTS_ENABLED = True
+PAYMENTS_ENABLED = os.environ.get("PAYMENTS_ENABLED", "false").lower() == "true"
 
 # RevenueCat product IDs → tier (subscriptions)
 _RC_PRODUCT_TIERS: dict[str, str] = {

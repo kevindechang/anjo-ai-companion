@@ -63,6 +63,37 @@ flowchart LR
 
 ---
 
+## Memory System
+
+Anjo uses three tiers of memory that serve different time horizons.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Tier 1 — PERSONA.md (per-user, prompt-cached)              │
+│  Static personality narrative generated from SelfCore.      │
+│  Only rebuilt when OCEAN trait labels flip. Always the      │
+│  first block of every system prompt — cached by Anthropic.  │
+├─────────────────────────────────────────────────────────────┤
+│  Tier 2 — JOURNAL.md (per-user, rolling 200 lines)          │
+│  Working memory: a running narrative of recent sessions,    │
+│  key events, and open threads. Consolidated by the          │
+│  reflection engine after each session. Injected every turn. │
+├─────────────────────────────────────────────────────────────┤
+│  Tier 3 — ChromaDB (per-user, long-term retrieval)          │
+│  Dual embeddings per memory: semantic (what happened) and   │
+│  emotional (how it felt). Retrieved conditionally via        │
+│  cosine similarity — only on turns that need it (~20%).     │
+│  Confidence framing: high → "I remember", mid → "I have    │
+│  a sense", low → omitted rather than hallucinated.          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+This separation is intentional. PERSONA.md makes prompt caching possible — the expensive static block is computed once and reused across turns. JOURNAL.md gives Anjo recent context without a retrieval call. ChromaDB handles anything older or more specific.
+
+All three files live in `data/users/{user_id}/` and are generated at runtime — nothing is committed to the repo.
+
+---
+
 ## Getting Started
 
 **Requirements:** Python 3.11+, Node 18+ (for mobile)
@@ -103,7 +134,7 @@ pytest
 **Core AI**
 - Personality — OCEAN traits + PAD mood with per-user drift and a frozen baseline
 - Reflection engine — three independent LLM passes after each session ends
-- Memory — dual-embedding ChromaDB storage (semantic + emotional vectors)
+- Three-tier memory system (see below)
 - Memory graph — typed nodes with auto-supersession and contradiction detection
 - Emotion — OCC appraisal, 9 mood-driven stances, per-emotion decay across turns
 
