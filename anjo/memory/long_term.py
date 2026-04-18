@@ -1,4 +1,16 @@
-"""ChromaDB wrapper — single global client, user_id metadata filtering."""
+"""ChromaDB wrapper — per-user collections for O(1) access and vector space isolation.
+
+Each user gets two dedicated collections:
+  sem_{user_id} — semantic embeddings (what happened)
+  emo_{user_id} — emotional embeddings (how it felt)
+
+This avoids the O(N) metadata pre-filter that a single global collection requires
+before any nearest-neighbor search can begin.
+
+Migration note: existing data in the legacy "semantic_memories" / "emotional_memories"
+global collections is not automatically migrated. Run scripts/migration_v2.py to
+move existing vectors into per-user collections before switching production over.
+"""
 from __future__ import annotations
 
 import json
@@ -11,8 +23,6 @@ from anjo.core.crypto import decrypt_chroma, encrypt_chroma, scrub_pii
 from anjo.memory.embedder import embed_semantic, embed_emotional
 
 _DATA_ROOT = Path(__file__).parent.parent.parent / "data"
-SEMANTIC_COLLECTION = "semantic_memories"
-EMOTIONAL_COLLECTION = "emotional_memories"
 
 _client: chromadb.PersistentClient | None = None
 
@@ -26,10 +36,13 @@ def _get_client() -> chromadb.PersistentClient:
     return _client
 
 
-def _get_collections():
+def _get_collections(user_id: str):
+    """Return (semantic_collection, emotional_collection) scoped to this user."""
     client = _get_client()
-    semantic = client.get_or_create_collection(SEMANTIC_COLLECTION)
-    emotional = client.get_or_create_collection(EMOTIONAL_COLLECTION)
+    sem_name = f"sem_{user_id}"
+    emo_name = f"emo_{user_id}"
+    semantic = client.get_or_create_collection(sem_name)
+    emotional = client.get_or_create_collection(emo_name)
     return semantic, emotional
 
 
@@ -45,7 +58,7 @@ def store_memory(
     relationship_stage: str,
     memory_type: str = "session",  # "session" | "episode"
 ) -> None:
-    semantic_col, emotional_col = _get_collections()
+    semantic_col, emotional_col = _get_collections(user_id)
 
     metadata = {
         "session_id": session_id,
@@ -74,9 +87,9 @@ def get_last_session_summary(user_id: str) -> str | None:
     """Return the most recent session summary by timestamp, regardless of semantic relevance.
     Only returns session-level memories, not episode-level moments.
     """
-    semantic_col, _ = _get_collections()
+    semantic_col, _ = _get_collections(user_id)
     results = semantic_col.get(
-        where={"$and": [{"user_id": user_id}, {"memory_type": "session"}]},
+        where={"memory_type": "session"},
         include=["documents", "metadatas"],
     )
     if not results["documents"]:
@@ -113,10 +126,10 @@ def query_memories(message: str, user_id: str, n_results: int = 4) -> list[tuple
     - score 0.5-0.7: medium certainty — "I have a sense that..."
     - score < 0.5: omit (noise)
     """
-    semantic_col, emotional_col = _get_collections()
+    semantic_col, emotional_col = _get_collections(user_id)
 
-    # Count user's memories to avoid over-querying
-    user_count = len(semantic_col.get(where={"user_id": user_id}, include=[])["ids"])
+    # Count memories in this user's collection to avoid over-querying
+    user_count = semantic_col.count()
     if user_count == 0:
         return []
 
@@ -127,12 +140,10 @@ def query_memories(message: str, user_id: str, n_results: int = 4) -> list[tuple
 
     sem_results = semantic_col.query(
         query_embeddings=[sem_vec], n_results=k,
-        where={"user_id": user_id},
         include=["documents", "distances", "metadatas"],
     )
     emo_results = emotional_col.query(
         query_embeddings=[emo_vec], n_results=k,
-        where={"user_id": user_id},
         include=["documents", "distances", "metadatas"],
     )
 

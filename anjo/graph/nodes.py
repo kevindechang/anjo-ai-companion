@@ -266,9 +266,11 @@ Current message: {msg}"""
         return {"intent": intent, "should_retrieve": retrieve, "should_respond": respond}
     except Exception as e:
         logger.warning(f"gate_node LLM failed, falling back to rule-based: {e}")
+        # On API failure, skip retrieval entirely — forcing a ChromaDB query when
+        # the LLM is already struggling compounds the latency problem.
         return {
             "intent": classify_intent(msg),
-            "should_retrieve": is_first or _should_retrieve_rules(msg),
+            "should_retrieve": False,
             "should_respond": True,
         }
 

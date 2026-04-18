@@ -93,6 +93,16 @@ Return valid JSON only:
     "longing_delta": float -0.1 to 0.1 or null,
     "comfort_delta": float -0.1 to 0.1 or null
   } — changes to Anjo's accumulated emotional investment. null for unchanged fields.
+  IMPORTANT: weight_delta, longing_delta, and comfort_delta must be in [-0.1, 0.1].
+  Do not exceed these bounds. Small increments only — relationships shift slowly.
+
+  Few-shot examples of correct attachment_update values:
+  Deep vulnerable session → {"weight_delta": 0.08, "texture": "tender", "longing_delta": 0.05, "comfort_delta": 0.07}
+  Hostile/dismissive user → {"weight_delta": -0.06, "texture": "guarded", "longing_delta": null, "comfort_delta": -0.04}
+  Casual small talk       → {"weight_delta": 0.01, "texture": null, "longing_delta": null, "comfort_delta": 0.02}
+  First real confession   → {"weight_delta": 0.09, "texture": "moved", "longing_delta": 0.06, "comfort_delta": null}
+  No significant change   → {"weight_delta": null, "texture": null, "longing_delta": null, "comfort_delta": null}
+
   "opinion_update": string or null — updated one-sentence honest opinion of the user.
     Include both strengths and genuine shortcomings. Not flattery. null if unchanged.
   "preoccupation": string or null — single sentence, one thought still turning in Anjo's
