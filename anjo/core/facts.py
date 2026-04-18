@@ -11,6 +11,7 @@ Max _MAX_FACTS active (non-superseded) facts at any time.
 
 Backwards-compatible: reads old format (list of plain strings + separate confidence_json).
 """
+
 from __future__ import annotations
 
 import html
@@ -29,8 +30,8 @@ _MAX_SUPERSEDED = 15
 
 class FactRecord(TypedDict):
     text: str
-    added_at: str           # ISO 8601 UTC timestamp
-    confidence: float       # 0.0–1.0
+    added_at: str  # ISO 8601 UTC timestamp
+    confidence: float  # 0.0–1.0
     superseded_at: str | None  # ISO timestamp when retired, else None
 
 
@@ -39,25 +40,41 @@ class FactRecord(TypedDict):
 # the existing fact is superseded (retired with a timestamp).
 
 _SUPERSEDABLE: list[tuple[re.Pattern, str]] = [
-    (re.compile(
-        r"\b(work|job|career|profession|employ|engineer|developer|doctor|nurse|teacher|"
-        r"student|manager|designer|scientist|lawyer|analyst|accountant|architect|chef|"
-        r"pilot|therapist|consultant|writer|artist|musician|athlete|programmer|coder|"
-        r"intern|freelanc)\b", re.I),
-     "occupation"),
-    (re.compile(
-        r"\b(live|lives|living|reside|based in|moved to|moved from|relocat|settled in|"
-        r"in (tokyo|london|new york|paris|berlin|sydney|seoul|singapore|dubai|toronto|"
-        r"chicago|los angeles|san francisco|beijing|shanghai|mumbai|delhi))\b", re.I),
-     "location"),
-    (re.compile(
-        r"\b(married|single|divorced|dating|relationship|partner|girlfriend|boyfriend|"
-        r"wife|husband|engaged|widowed|separated|broke up|breaking up)\b", re.I),
-     "relationship_status"),
-    (re.compile(
-        r"\b(study|studying|school|university|college|major|degree|graduate|graduated|"
-        r"enrolled|enrollment|phd|masters|bachelors)\b", re.I),
-     "education"),
+    (
+        re.compile(
+            r"\b(work|job|career|profession|employ|engineer|developer|doctor|nurse|teacher|"
+            r"student|manager|designer|scientist|lawyer|analyst|accountant|architect|chef|"
+            r"pilot|therapist|consultant|writer|artist|musician|athlete|programmer|coder|"
+            r"intern|freelanc)\b",
+            re.I,
+        ),
+        "occupation",
+    ),
+    (
+        re.compile(
+            r"\b(live|lives|living|reside|based in|moved to|moved from|relocat|settled in|"
+            r"in (tokyo|london|new york|paris|berlin|sydney|seoul|singapore|dubai|toronto|"
+            r"chicago|los angeles|san francisco|beijing|shanghai|mumbai|delhi))\b",
+            re.I,
+        ),
+        "location",
+    ),
+    (
+        re.compile(
+            r"\b(married|single|divorced|dating|relationship|partner|girlfriend|boyfriend|"
+            r"wife|husband|engaged|widowed|separated|broke up|breaking up)\b",
+            re.I,
+        ),
+        "relationship_status",
+    ),
+    (
+        re.compile(
+            r"\b(study|studying|school|university|college|major|degree|graduate|graduated|"
+            r"enrolled|enrollment|phd|masters|bachelors)\b",
+            re.I,
+        ),
+        "education",
+    ),
 ]
 
 
@@ -75,12 +92,17 @@ def _sanitize_fact(fact: str) -> str:
 
 # ── Internal load/save ────────────────────────────────────────────────────────
 
+
 def _load_all(user_id: str) -> list[FactRecord]:
     """Load all fact records (active + superseded), handling both old and new formats."""
-    row = get_db().execute(
-        "SELECT facts_json, confidence_json, updated_at FROM facts WHERE user_id = ?",
-        (user_id,),
-    ).fetchone()
+    row = (
+        get_db()
+        .execute(
+            "SELECT facts_json, confidence_json, updated_at FROM facts WHERE user_id = ?",
+            (user_id,),
+        )
+        .fetchone()
+    )
     if not row:
         return []
 
@@ -105,12 +127,14 @@ def _load_all(user_id: str) -> list[FactRecord]:
             if not text:
                 continue
             conf = float(confs[i]) if i < len(confs) else 1.0
-            records.append({
-                "text": _sanitize_fact(text),
-                "added_at": fallback_ts,
-                "confidence": conf,
-                "superseded_at": None,
-            })
+            records.append(
+                {
+                    "text": _sanitize_fact(text),
+                    "added_at": fallback_ts,
+                    "confidence": conf,
+                    "superseded_at": None,
+                }
+            )
         return records
 
     # ── New format: list of dicts ─────────────────────────────────────────────
@@ -118,12 +142,14 @@ def _load_all(user_id: str) -> list[FactRecord]:
     for item in raw:
         if not isinstance(item, dict) or not item.get("text"):
             continue
-        records.append({
-            "text": _sanitize_fact(item["text"]),
-            "added_at": item.get("added_at", fallback_ts),
-            "confidence": float(item.get("confidence", 1.0)),
-            "superseded_at": item.get("superseded_at"),
-        })
+        records.append(
+            {
+                "text": _sanitize_fact(item["text"]),
+                "added_at": item.get("added_at", fallback_ts),
+                "confidence": float(item.get("confidence", 1.0)),
+                "superseded_at": item.get("superseded_at"),
+            }
+        )
     return records
 
 
@@ -154,6 +180,7 @@ def _save_all(user_id: str, records: list[FactRecord]) -> None:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+
 def load_facts(user_id: str) -> list[str]:
     """Return active (non-superseded) fact texts, newest first."""
     return [r["text"] for r in _load_all(user_id) if not r["superseded_at"]]
@@ -161,11 +188,7 @@ def load_facts(user_id: str) -> list[str]:
 
 def load_facts_with_confidence(user_id: str) -> list[tuple[str, float]]:
     """Return (text, confidence) pairs for active facts. Backwards-compatible."""
-    return [
-        (r["text"], r["confidence"])
-        for r in _load_all(user_id)
-        if not r["superseded_at"]
-    ]
+    return [(r["text"], r["confidence"]) for r in _load_all(user_id) if not r["superseded_at"]]
 
 
 def load_facts_with_meta(user_id: str) -> list[FactRecord]:
@@ -195,7 +218,7 @@ def merge_facts(
         confidences = [max(0.0, min(1.0, float(c))) for c in confidences]
         if len(confidences) < len(new_facts):
             confidences += [1.0] * (len(new_facts) - len(confidences))
-        confidences = confidences[:len(new_facts)]
+        confidences = confidences[: len(new_facts)]
 
     now = datetime.now(timezone.utc).isoformat()
     existing = _load_all(user_id)
@@ -216,12 +239,14 @@ def merge_facts(
                 if not rec["superseded_at"] and _fact_category(rec["text"]) == cat:
                     supersede_texts.add(rec["text"].lower())
 
-        to_add.append({
-            "text": fact,
-            "added_at": now,
-            "confidence": conf,
-            "superseded_at": None,
-        })
+        to_add.append(
+            {
+                "text": fact,
+                "added_at": now,
+                "confidence": conf,
+                "superseded_at": None,
+            }
+        )
 
     # Apply supersession timestamps to existing records
     updated_existing: list[FactRecord] = []

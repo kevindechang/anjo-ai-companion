@@ -1,4 +1,5 @@
 """Account management: settings, forgetting, and deletion."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,7 +8,7 @@ import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-_USERNAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+_USERNAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 from anjo.dashboard.auth import (
     COOKIE_NAME,
@@ -25,6 +26,7 @@ router = APIRouter()
 
 
 # ── Account info ──────────────────────────────────────────────────────────────
+
 
 @router.get("/account")
 def account_info(user_id: str = Depends(get_current_user_id)):
@@ -51,8 +53,14 @@ async def account_update_email(request: Request, user_id: str = Depends(get_curr
         info = get_user_info(user_id)
         username = info["username"] if info else user_id
         from anjo.core.email import send_verification_email
+
         await asyncio.to_thread(send_verification_email, new_email, username, new_token)
-    return {"ok": True, "verification_sent": bool(result and new_email and new_token and os.environ.get("RESEND_API_KEY"))}
+    return {
+        "ok": True,
+        "verification_sent": bool(
+            result and new_email and new_token and os.environ.get("RESEND_API_KEY")
+        ),
+    }
 
 
 @router.post("/account/update-username")
@@ -76,7 +84,7 @@ async def account_update_username(request: Request, user_id: str = Depends(get_c
 async def account_change_password(request: Request, user_id: str = Depends(get_current_user_id)):
     body = await request.json()
     current = body.get("current_password", "")
-    new_pw  = body.get("new_password", "")
+    new_pw = body.get("new_password", "")
     if not verify_password(user_id, current):
         raise HTTPException(403, "Incorrect current password.")
     pw_err = validate_password_strength(new_pw)
@@ -88,6 +96,7 @@ async def account_change_password(request: Request, user_id: str = Depends(get_c
 
 # ── Forgetting & deletion ─────────────────────────────────────────────────────
 
+
 @router.post("/forget")
 async def request_forget(request: Request, user_id: str = Depends(get_current_user_id)):
     body = await request.json()
@@ -95,6 +104,7 @@ async def request_forget(request: Request, user_id: str = Depends(get_current_us
     if not verify_password(user_id, password):
         raise HTTPException(403, "Incorrect password.")
     from anjo.core.forgetting import negotiate_and_forget
+
     response = negotiate_and_forget(user_id)
     return {"response": response}
 
@@ -107,6 +117,7 @@ async def account_delete(request: Request, user_id: str = Depends(get_current_us
         raise HTTPException(403, "Incorrect password.")
     await asyncio.to_thread(delete_account, user_id)
     from fastapi.responses import JSONResponse
+
     resp = JSONResponse({"ok": True})
     resp.delete_cookie(COOKIE_NAME)
     return resp

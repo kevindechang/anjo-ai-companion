@@ -1,4 +1,5 @@
 """Rule-based classifier: decides whether long-term memory retrieval is warranted."""
+
 from __future__ import annotations
 
 import re
@@ -22,10 +23,31 @@ _PAST_REFERENCE_PATTERNS = [
 
 # Emotional vocabulary that often warrants memory context
 _EMOTIONAL_MARKERS = {
-    "lonely", "scared", "afraid", "anxious", "proud", "miss", "hurt",
-    "lost", "confused", "overwhelmed", "excited", "devastated", "ashamed",
-    "grateful", "hopeful", "frustrated", "empty", "numb", "jealous",
-    "betrayed", "vulnerable", "broken", "happy", "sad", "depressed",
+    "lonely",
+    "scared",
+    "afraid",
+    "anxious",
+    "proud",
+    "miss",
+    "hurt",
+    "lost",
+    "confused",
+    "overwhelmed",
+    "excited",
+    "devastated",
+    "ashamed",
+    "grateful",
+    "hopeful",
+    "frustrated",
+    "empty",
+    "numb",
+    "jealous",
+    "betrayed",
+    "vulnerable",
+    "broken",
+    "happy",
+    "sad",
+    "depressed",
 }
 
 _PAST_PATTERNS_COMPILED = [re.compile(p, re.IGNORECASE) for p in _PAST_REFERENCE_PATTERNS]

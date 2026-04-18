@@ -4,6 +4,7 @@ Extracted from chat_routes.py to keep route handlers thin. Contains:
 - Deduplication tracking (bounded ordered sets for reflection + quick-facts)
 - Background thread spawners for quick-facts extraction and mid-session reflection
 """
+
 from __future__ import annotations
 
 import collections
@@ -53,6 +54,7 @@ def cleanup_session_tracking(user_id: str, session_id: str) -> None:
 
 # ── Background tasks ────────────────────────────────────────────────────────
 
+
 def quick_facts_extract(user_id: str, session_id: str, transcript: list[dict]) -> None:
     """After 4 user messages: extract name + concrete facts in background using Haiku.
 
@@ -66,20 +68,18 @@ def quick_facts_extract(user_id: str, session_id: str, transcript: list[dict]) -
 
     def _run():
         try:
-            from anjo.core.llm import get_client, MODEL_BACKGROUND
             from anjo.core.facts import merge_facts
+            from anjo.core.llm import MODEL_BACKGROUND, get_client
             from anjo.core.self_core import SelfCore
 
-            transcript_text = "\n".join(
-                f"{m['role'].upper()}: {m['content']}" for m in transcript
-            )
+            transcript_text = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in transcript)
             system = (
                 "Extract concrete facts from this conversation.\n"
-                "Return JSON only: {\"user_name\": str or null, \"facts\": [\"fact1\", ...]}\n"
+                'Return JSON only: {"user_name": str or null, "facts": ["fact1", ...]}\n'
                 "- user_name: the user's first name if they stated it, else null\n"
                 "- facts: up to 3 specific details the user explicitly shared "
                 "(job, location, hobby, life circumstance). NOT impressions.\n"
-                "If nothing concrete: {\"user_name\": null, \"facts\": []}"
+                'If nothing concrete: {"user_name": null, "facts": []}'
             )
             response = get_client().messages.create(
                 model=MODEL_BACKGROUND,
@@ -87,8 +87,10 @@ def quick_facts_extract(user_id: str, session_id: str, transcript: list[dict]) -
                 system=system,
                 messages=[{"role": "user", "content": transcript_text}],
             )
-            if not response.content or not hasattr(response.content[0], 'text'):
-                logger.error(f"Quick facts extraction: unexpected LLM response for {user_id}: {response}")
+            if not response.content or not hasattr(response.content[0], "text"):
+                logger.error(
+                    f"Quick facts extraction: unexpected LLM response for {user_id}: {response}"
+                )
                 return
             raw = re.sub(r"^```(?:json)?\s*", "", response.content[0].text.strip())
             raw = re.sub(r"\s*```$", "", raw)
@@ -127,8 +129,9 @@ def maybe_mid_reflect(user_id: str, transcript: list[dict]) -> None:
 
     def _run():
         try:
-            from anjo.reflection.engine import run_reflection
             from anjo.core.self_core import SelfCore
+            from anjo.reflection.engine import run_reflection
+
             core_dict = get_self_core_safe(user_id)
             if not core_dict:
                 logger.warning(f"Mid-reflect: session gone for {user_id}, skipping")

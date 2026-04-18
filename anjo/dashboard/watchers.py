@@ -3,14 +3,15 @@
 Extracted from app.py to break the God Module pattern.
 Watchers run as asyncio tasks inside the FastAPI lifespan.
 """
+
 from __future__ import annotations
 
 import asyncio
 
 from anjo.core.logger import logger
 
-INACTIVITY_CHECK_INTERVAL = 60    # seconds between checks
-DRIFT_CHECK_INTERVAL      = 3600  # seconds — checks hourly, applies at most daily
+INACTIVITY_CHECK_INTERVAL = 60  # seconds between checks
+DRIFT_CHECK_INTERVAL = 3600  # seconds — checks hourly, applies at most daily
 
 _REFLECTING_LOCK: set[str] = set()
 
@@ -26,10 +27,10 @@ def _log_reflection_exception(task: asyncio.Task) -> None:
 
 async def _inactivity_watcher() -> None:
     """Background task: reflect on sessions that have gone quiet."""
-    from anjo.dashboard.session_store import get_inactive_sessions, check_and_cleanup_session
-    from anjo.core.transcript_queue import save_pending, delete_pending
     from anjo.core.self_core import SelfCore
-    from anjo.dashboard.background_tasks import reflection_session_claim, cleanup_session_tracking
+    from anjo.core.transcript_queue import delete_pending, save_pending
+    from anjo.dashboard.background_tasks import cleanup_session_tracking, reflection_session_claim
+    from anjo.dashboard.session_store import check_and_cleanup_session, get_inactive_sessions
     from anjo.reflection.engine import run_reflection
 
     _reflection_semaphore = asyncio.Semaphore(5)  # limit concurrent reflections
@@ -55,8 +56,12 @@ async def _inactivity_watcher() -> None:
                 _REFLECTING_LOCK.add(user_id)
 
                 async def _run_reflection_task(
-                    t=transcript, c=live_core, u=user_id, s=sid,
-                    p=pending_path, la=last_activity,
+                    t=transcript,
+                    c=live_core,
+                    u=user_id,
+                    s=sid,
+                    p=pending_path,
+                    la=last_activity,
                 ):
                     try:
                         async with _reflection_semaphore:
@@ -70,7 +75,13 @@ async def _inactivity_watcher() -> None:
                                     )
                                     return
                                 try:
-                                    run_reflection(transcript=t, core=c, user_id=u, session_id=s, last_activity=la)
+                                    run_reflection(
+                                        transcript=t,
+                                        core=c,
+                                        user_id=u,
+                                        session_id=s,
+                                        last_activity=la,
+                                    )
                                     delete_pending(p)
                                     reflected_ok = True
                                 except Exception as e:
@@ -95,7 +106,7 @@ async def _inactivity_watcher() -> None:
 
 async def _drift_watcher() -> None:
     """Background task: apply daily state drift and AutoDream consolidation for all users."""
-    from anjo.core.drift import run_drift_for_all_users, run_autodream_for_all_users
+    from anjo.core.drift import run_autodream_for_all_users, run_drift_for_all_users
 
     while True:
         await asyncio.sleep(DRIFT_CHECK_INTERVAL)

@@ -3,13 +3,15 @@
 These tests verify that specific bugs that were fixed don't regress.
 Tests are designed to work with the isolated test environment.
 """
+
 from __future__ import annotations
 
 import json
+
 import pytest
 
-
 # ── SelfCore.user_id field ─────────────────────────────────────────────────────
+
 
 class TestSelfCoreUserIdField:
     """Test that user_id survives model_validate() calls.
@@ -47,7 +49,7 @@ class TestSelfCoreUserIdField:
 
     def test_save_writes_to_correct_user_directory(self):
         """SelfCore.save() should write to the correct user's directory."""
-        from anjo.core.self_core import SelfCore, _core_dir, _DATA_ROOT
+        from anjo.core.self_core import SelfCore, _core_dir
 
         user_id = "save-test-user-456"
         core = SelfCore.load(user_id)
@@ -62,11 +64,13 @@ class TestSelfCoreUserIdField:
 
         # Verify the content has the correct user_id (file is now encrypted)
         from anjo.core.crypto import read_encrypted
+
         content = json.loads(read_encrypted(expected_path))
         assert content["user_id"] == user_id
 
 
 # ── Security: Facts sanitization ───────────────────────────────────────────────
+
 
 class TestFactsSanitization:
     """Test that facts are sanitized to prevent XSS attacks.
@@ -86,15 +90,15 @@ class TestFactsSanitization:
         assert "&lt;script&gt;" in sanitized
 
         # Event handlers should also be escaped
-        malicious2 = '<img src=x onerror=alert(1)>'
+        malicious2 = "<img src=x onerror=alert(1)>"
         sanitized2 = _sanitize_fact(malicious2)
         assert "<img" not in sanitized2
         assert "&lt;img" in sanitized2
 
     def test_facts_load_sanitizes(self, auth_client):
         """load_facts() should sanitize all returned facts."""
-        from anjo.core.facts import load_facts
         from anjo.core.db import get_db
+        from anjo.core.facts import load_facts
 
         user_id = "sanitize-test-user"
 
@@ -102,7 +106,7 @@ class TestFactsSanitization:
         db = get_db()
         db.execute(
             "INSERT OR REPLACE INTO facts (user_id, facts_json, updated_at) VALUES (?, ?, ?)",
-            (user_id, json.dumps(['<script>bad</script>', 'Normal fact']), "2024-01-01T00:00:00"),
+            (user_id, json.dumps(["<script>bad</script>", "Normal fact"]), "2024-01-01T00:00:00"),
         )
         db.commit()
 
@@ -117,7 +121,7 @@ class TestFactsSanitization:
         user_id = "merge-sanitize-test"
 
         # Merge malicious facts
-        malicious = ['<img onerror=alert(1) src=x>', 'legit fact']
+        malicious = ["<img onerror=alert(1) src=x>", "legit fact"]
         merge_facts(user_id, malicious)
 
         # Stored facts should be sanitized
@@ -125,102 +129,8 @@ class TestFactsSanitization:
         assert all("<img" not in f for f in facts)
 
 
-# ── Atomic credit deduction ─────────────────────────────────────────────────────
-
-class TestAtomicCreditDeduction:
-    """Test that concurrent credit deductions don't go negative.
-
-    Bug: Credit deductions used separate SELECT and UPDATE operations,
-    allowing race conditions where concurrent deductions could bring
-    balance negative.
-    """
-
-    def test_deduct_cost_prevents_negative_balance(self, auth_client):
-        """deduct_cost() should never go negative even with concurrent calls."""
-        from anjo.core.credits import deduct_cost, grant_initial_credits, get_balance
-
-        user_id = "atomic-test-user"
-        grant_initial_credits(user_id)
-
-        # Get initial balance (5.00)
-        initial = get_balance(user_id)
-
-        # Simulate a cost larger than balance
-        # The atomic CASE should prevent negative
-        result = deduct_cost(user_id, "claude-sonnet-4-6", 1_000_000, 1_000_000)
-
-        # Balance should be 0, not negative
-        final = get_balance(user_id)
-        assert final >= 0, f"Balance went negative: {final}"
-        assert final == 0.0, f"Expected 0.0, got {final}"
-
-    def test_concurrent_deduct_cost_atomic(self, auth_client):
-        """Concurrent deduct_cost calls should be atomic."""
-        from anjo.core.credits import deduct_cost, grant_initial_credits, get_balance
-        import concurrent.futures
-
-        user_id = "concurrent-test-user"
-        grant_initial_credits(user_id)
-
-        # Make many small deductions concurrently
-        # Each deduction is small (1000 tokens = ~$0.003)
-        def deduct():
-            return deduct_cost(user_id, "claude-haiku-4-5-20251001", 1000, 1000)
-
-        # Run 10 concurrent deductions (total = ~$0.03)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [executor.submit(deduct) for _ in range(10)]
-            results = [f.result() for f in concurrent.futures.as_completed(futures)]
-
-        # Final balance should be >= 0
-        final = get_balance(user_id)
-        assert final >= 0, f"Concurrent deduction caused negative balance: {final}"
-
-    def test_deduct_message_credit_atomic(self, auth_client):
-        """deduct_message_credit() should be atomic and prevent negative."""
-        from anjo.core.credits import deduct_message_credit, add_message_credits, get_message_credits
-
-        user_id = "msg-credit-test"
-
-        # Add exactly 1 credit
-        add_message_credits(user_id, 1)
-        assert get_message_credits(user_id) == 1
-
-        # Deduct it
-        result = deduct_message_credit(user_id)
-        assert result is True
-        assert get_message_credits(user_id) == 0
-
-        # Try to deduct when none available - should fail gracefully
-        result = deduct_message_credit(user_id)
-        assert result is False
-        assert get_message_credits(user_id) == 0  # Should not go negative
-
-    def test_concurrent_message_credit_deduction(self, auth_client):
-        """Concurrent message credit deductions should not go negative."""
-        from anjo.core.credits import deduct_message_credit, add_message_credits, get_message_credits
-        import concurrent.futures
-
-        user_id = "concurrent-msg-test"
-
-        # Add 5 credits
-        add_message_credits(user_id, 5)
-
-        # Try to deduct 10 concurrently (only 5 should succeed)
-        def try_deduct():
-            return deduct_message_credit(user_id)
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [executor.submit(try_deduct) for _ in range(10)]
-            results = [f.result() for f in concurrent.futures.as_completed(futures)]
-
-        # Should have exactly 5 successes
-        assert sum(results) == 5
-        # Balance should be 0
-        assert get_message_credits(user_id) == 0
-
-
 # ── Reflection retry logic ─────────────────────────────────────────────────────
+
 
 class TestReflectionRetry:
     """Test that reflection retry works for transient failures.
@@ -231,9 +141,10 @@ class TestReflectionRetry:
 
     def test_retry_on_transient_failure(self, auth_client):
         """run_reflection should retry when LLM call fails transiently."""
-        from anjo.reflection.engine import run_reflection
+        from unittest.mock import MagicMock, patch
+
         from anjo.core.self_core import SelfCore
-        from unittest.mock import patch, MagicMock
+        from anjo.reflection.engine import run_reflection
 
         user_id = "retry-test-user"
         session_id = "retry-session-123"
@@ -259,7 +170,11 @@ class TestReflectionRetry:
                 raise Exception("Transient error")
             # Return success on 3rd attempt
             mock_response = MagicMock()
-            mock_response.content = [MagicMock(text='{"analysis": {"user_input_valence": 0.5, "triggers": []}, "memory": {"summary": "test", "emotional_tone": "neutral", "emotional_valence": 0.0, "topics": [], "significance": 0.3}}')]
+            mock_response.content = [
+                MagicMock(
+                    text='{"analysis": {"user_input_valence": 0.5, "triggers": []}, "memory": {"summary": "test", "emotional_tone": "neutral", "emotional_valence": 0.0, "topics": [], "significance": 0.3}}'
+                )
+            ]
             return mock_response
 
         with patch("anjo.reflection.engine.get_client") as mock_client:
@@ -277,9 +192,10 @@ class TestReflectionRetry:
 
     def test_max_retries_exceeded_returns_early(self, auth_client):
         """When all retries fail, should log error and return gracefully."""
-        from anjo.reflection.engine import run_reflection
-        from anjo.core.self_core import SelfCore
         from unittest.mock import patch
+
+        from anjo.core.self_core import SelfCore
+        from anjo.reflection.engine import run_reflection
 
         user_id = "max-retry-test"
         session_id = "max-retry-session"
@@ -309,6 +225,7 @@ class TestReflectionRetry:
 
 # ── Double reflection guard ───────────────────────────────────────────────────
 
+
 class TestDoubleReflectionGuard:
     """Test that the same session isn't reflected twice.
 
@@ -335,7 +252,7 @@ class TestDoubleReflectionGuard:
 
         # Read the log - should have exactly one entry
         logs = read_log(user_id)
-        session_logs = [l for l in logs if l.get("session_id") == session_id]
+        session_logs = [entry for entry in logs if entry.get("session_id") == session_id]
         assert len(session_logs) == 1
 
     def test_duplicate_session_reflection_overwrites(self):
@@ -365,12 +282,13 @@ class TestDoubleReflectionGuard:
 
         # Should have 2 entries (append-only log)
         logs = read_log(user_id)
-        session_logs = [l for l in logs if l.get("session_id") == session_id]
+        session_logs = [entry for entry in logs if entry.get("session_id") == session_id]
         # Log is append-only, so duplicates are allowed but distinguishable
         assert len(session_logs) == 2
 
 
 # ── Drift race condition ───────────────────────────────────────────────────────
+
 
 class TestDriftRaceCondition:
     """Test that drift skips users with active sessions.
@@ -383,7 +301,7 @@ class TestDriftRaceCondition:
     def test_drift_skips_active_session(self, auth_client):
         """apply_daily_drift() should skip users with active sessions."""
         from anjo.core.drift import apply_daily_drift
-        from anjo.dashboard.session_store import get_or_create_session, delete_session, get_session
+        from anjo.dashboard.session_store import delete_session, get_or_create_session, get_session
 
         user_id = "drift-race-test"
 
@@ -401,7 +319,7 @@ class TestDriftRaceCondition:
     def test_drift_runs_without_active_session(self, auth_client):
         """apply_daily_drift() should run when no active session."""
         from anjo.core.drift import apply_daily_drift
-        from anjo.dashboard.session_store import get_session, delete_session
+        from anjo.dashboard.session_store import delete_session, get_session
 
         user_id = "drift-no-session-test"
 
@@ -416,7 +334,7 @@ class TestDriftRaceCondition:
     def test_drift_respects_rate_limit(self, auth_client):
         """Drift should respect the 20-hour rate limit."""
         from anjo.core.drift import apply_daily_drift
-        from anjo.dashboard.session_store import get_session, delete_session
+        from anjo.dashboard.session_store import delete_session, get_session
 
         user_id = "drift-rate-limit-test"
 
@@ -434,7 +352,7 @@ class TestDriftRaceCondition:
 
     def test_get_session_returns_active_session(self, auth_client):
         """Verify session store correctly tracks active sessions."""
-        from anjo.dashboard.session_store import get_or_create_session, get_session, delete_session
+        from anjo.dashboard.session_store import delete_session, get_or_create_session, get_session
 
         user_id = "session-track-test"
 
@@ -450,41 +368,8 @@ class TestDriftRaceCondition:
         assert get_session(user_id) is None
 
 
-# ── Credit system integration ─────────────────────────────────────────────────
-
-class TestCreditSystemIntegration:
-    """Integration tests for the credit system."""
-
-    def test_initial_credits_on_registration(self, auth_client):
-        """New users should receive initial credits."""
-        from anjo.core.credits import get_balance, INITIAL_CREDIT_USD
-
-        # Get the user_id from the auth_client fixture context
-        # The fixture registers "testuser", so we can query their balance
-        # But we need to ensure the user has credits
-        from anjo.core.db import get_db
-        db = get_db()
-        row = db.execute("SELECT user_id FROM users LIMIT 1").fetchone()
-        if row:
-            user_id = row["user_id"]
-            balance = get_balance(user_id)
-            assert balance == INITIAL_CREDIT_USD
-
-    def test_balance_check_prevents_negative_spend(self, auth_client):
-        """has_balance() should return False when balance is 0."""
-        from anjo.core.credits import has_balance, grant_initial_credits, deduct_cost
-
-        user_id = "neg-spend-test"
-        grant_initial_credits(user_id)
-
-        # Drain the balance
-        deduct_cost(user_id, "claude-sonnet-4-6", 10_000_000, 10_000_000)
-
-        # Should have no balance
-        assert has_balance(user_id) is False
-
-
 # ── SelfCore save atomicity ───────────────────────────────────────────────────
+
 
 class TestSelfCoreSaveAtomicity:
     """Test SelfCore save is atomic and handles failures gracefully."""

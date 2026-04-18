@@ -13,6 +13,7 @@ Stored in SQLite `memory_graph` table. Supports:
   - Contradiction detection (two active facts with conflicting content)
   - User-facing deletion (semantic/fact nodes granular, emotional by date range)
 """
+
 from __future__ import annotations
 
 import json
@@ -23,14 +24,15 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from anjo.core.crypto import encrypt_db, decrypt_db
+from anjo.core.crypto import decrypt_db, encrypt_db
 from anjo.core.db import get_db
-
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
+
 class MemoryNode(BaseModel):
     """A typed memory node in the user's relationship graph."""
+
     id: str = Field(default_factory=lambda: str(uuid.uuid4())[:12])
     user_id: str
     node_type: str  # fact | preference | commitment | thread | contradiction
@@ -53,23 +55,36 @@ VALID_NODE_TYPES = {"fact", "preference", "commitment", "thread", "contradiction
 # ── Category detection (for supersession) ─────────────────────────────────────
 
 _CATEGORIES: list[tuple[re.Pattern, str]] = [
-    (re.compile(
-        r"\b(work|job|career|profession|employ|engineer|developer|doctor|nurse|teacher|"
-        r"student|manager|designer|scientist|lawyer|analyst|architect|chef|"
-        r"pilot|therapist|consultant|writer|artist|musician|programmer|coder|"
-        r"intern|freelanc)\b", re.I),
-     "occupation"),
-    (re.compile(
-        r"\b(live|lives|living|reside|based in|moved to|relocated|settled in)\b", re.I),
-     "location"),
-    (re.compile(
-        r"\b(married|single|divorced|dating|relationship|partner|girlfriend|boyfriend|"
-        r"wife|husband|engaged|widowed|separated|broke up)\b", re.I),
-     "relationship_status"),
-    (re.compile(
-        r"\b(study|studying|school|university|college|major|degree|graduate|graduated|"
-        r"phd|masters|bachelors)\b", re.I),
-     "education"),
+    (
+        re.compile(
+            r"\b(work|job|career|profession|employ|engineer|developer|doctor|nurse|teacher|"
+            r"student|manager|designer|scientist|lawyer|analyst|architect|chef|"
+            r"pilot|therapist|consultant|writer|artist|musician|programmer|coder|"
+            r"intern|freelanc)\b",
+            re.I,
+        ),
+        "occupation",
+    ),
+    (
+        re.compile(r"\b(live|lives|living|reside|based in|moved to|relocated|settled in)\b", re.I),
+        "location",
+    ),
+    (
+        re.compile(
+            r"\b(married|single|divorced|dating|relationship|partner|girlfriend|boyfriend|"
+            r"wife|husband|engaged|widowed|separated|broke up)\b",
+            re.I,
+        ),
+        "relationship_status",
+    ),
+    (
+        re.compile(
+            r"\b(study|studying|school|university|college|major|degree|graduate|graduated|"
+            r"phd|masters|bachelors)\b",
+            re.I,
+        ),
+        "education",
+    ),
 ]
 
 
@@ -81,6 +96,7 @@ def _detect_category(content: str) -> str | None:
 
 
 # ── CRUD operations ───────────────────────────────────────────────────────────
+
 
 def add_node(
     user_id: str,
@@ -131,8 +147,18 @@ def add_node(
         "INSERT INTO memory_graph "
         "(id, user_id, node_type, content, confidence, source_session, created_at, updated_at, superseded_at, related_nodes) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (node.id, user_id, node_type, encrypt_db(content), confidence,
-         source_session, now, now, None, json.dumps(node.related_nodes)),
+        (
+            node.id,
+            user_id,
+            node_type,
+            encrypt_db(content),
+            confidence,
+            source_session,
+            now,
+            now,
+            None,
+            json.dumps(node.related_nodes),
+        ),
     )
     db.commit()
     return node
@@ -167,18 +193,20 @@ def get_nodes(
             content = decrypt_db(row["content"])
         except Exception:
             content = row["content"]  # fallback if not encrypted
-        nodes.append(MemoryNode(
-            id=row["id"],
-            user_id=row["user_id"],
-            node_type=row["node_type"],
-            content=content,
-            confidence=row["confidence"],
-            source_session=row["source_session"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
-            superseded_at=row["superseded_at"],
-            related_nodes=json.loads(row["related_nodes"]) if row["related_nodes"] else [],
-        ))
+        nodes.append(
+            MemoryNode(
+                id=row["id"],
+                user_id=row["user_id"],
+                node_type=row["node_type"],
+                content=content,
+                confidence=row["confidence"],
+                source_session=row["source_session"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
+                superseded_at=row["superseded_at"],
+                related_nodes=json.loads(row["related_nodes"]) if row["related_nodes"] else [],
+            )
+        )
     return nodes
 
 
@@ -252,6 +280,7 @@ def get_nodes_for_prompt(user_id: str) -> dict[str, list[str]]:
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
 
 def _update_confidence(node_id: str, confidence: float) -> None:
     now = datetime.now(timezone.utc).isoformat()

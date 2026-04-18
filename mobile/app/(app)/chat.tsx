@@ -506,13 +506,6 @@ export default function Chat() {
             <View style={styles.divider} />
             <TouchableOpacity
               style={styles.dropdownItem}
-              onPress={() => { setMenuOpen(false); router.push('/(app)/billing'); }}
-            >
-              <Text style={styles.dropdownText}>Plans &amp; billing</Text>
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity
-              style={styles.dropdownItem}
               onPress={() => { setMenuOpen(false); router.push('/(app)/settings'); }}
             >
               <Text style={styles.dropdownText}>Settings</Text>

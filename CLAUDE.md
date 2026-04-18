@@ -187,7 +187,6 @@ Sliding window, in-memory, **reset on restart**:
 - `/login`, `/forgot`, `/reset` — 10 req/min per IP
 - `/api/auth/*` — 10 req/min per IP  
 - `/api/chat/*` — 30 req/min per user
-- `/api/billing/*` — 20 req/min per user
 - `/api/*` (catch-all) — 120 req/min per user/IP
 
 ### Admin Panel
@@ -232,7 +231,6 @@ All routes are in `anjo/dashboard/routes/`:
 | `self_core_routes.py` | `/api` | SelfCore read/update |
 | `memory_routes.py` | `/api` | Memory retrieval endpoints |
 | `story_routes.py` | `/api` | Story / memory narrative endpoints |
-| `billing_routes.py` | `/api` | RevenueCat billing (subscriptions + credit packs) |
 
 ### Input Validation Rules
 

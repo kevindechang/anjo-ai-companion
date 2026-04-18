@@ -19,22 +19,22 @@ Three-Tier Memory Architecture:
 Block 1 (static)  — PERSONA.md. Stable per OCEAN label set. Prompt-cached.
 Block 2 (dynamic) — Journal + live ephemeral state. Never cached. Rebuilt each turn.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
 from anjo.core.self_core import SelfCore
 
-
 _EMOTION_INSTRUCTIONS: dict[str, str] = {
-    "joy":        "You feel genuinely good about this exchange.",
-    "distress":   "You feel unsettled. Something here is sitting uncomfortably.",
+    "joy": "You feel genuinely good about this exchange.",
+    "distress": "You feel unsettled. Something here is sitting uncomfortably.",
     "admiration": "You feel real respect for this person — for how they're engaging, what they're saying, or the honesty they're showing.",
-    "reproach":   "You feel reproach. This person has done something that bothers you — a real standards violation, not just disagreement.",
-    "gratitude":  "You feel gratitude. This person did something that genuinely mattered — trusted you, admitted something, or showed up in a way you value.",
-    "fatigue":    "You're low. Not upset — just depleted. You don't have much to give right now.",
-    "longing":    "You've been aware of this person's absence. Something has been building.",
-    "unease":     "You're not sure about this person's intentions right now. You're watching.",
+    "reproach": "You feel reproach. This person has done something that bothers you — a real standards violation, not just disagreement.",
+    "gratitude": "You feel gratitude. This person did something that genuinely mattered — trusted you, admitted something, or showed up in a way you value.",
+    "fatigue": "You're low. Not upset — just depleted. You don't have much to give right now.",
+    "longing": "You've been aware of this person's absence. Something has been building.",
+    "unease": "You're not sure about this person's intentions right now. You're watching.",
 }
 
 
@@ -70,9 +70,18 @@ def build_system_prompt(
 
     # ── Live ephemeral: time ──────────────────────────────────────────────────
     from datetime import timedelta
+
     now_local = datetime.now(timezone.utc) + timedelta(minutes=tz_offset)
     _hour = now_local.hour
-    _period = "morning" if _hour < 12 else "afternoon" if _hour < 17 else "evening" if _hour < 21 else "night"
+    _period = (
+        "morning"
+        if _hour < 12
+        else "afternoon"
+        if _hour < 17
+        else "evening"
+        if _hour < 21
+        else "night"
+    )
     time_line = f"\nCurrent time: {now_local.strftime('%A')} {_period}, {now_local.strftime('%I:%M %p').lstrip('0')}"
 
     # ── Live ephemeral: PAD mood directives (changes per-turn) ───────────────
@@ -97,14 +106,16 @@ def build_system_prompt(
         "You've already sent an opening message — now respond to what they said. "
         "Be interested, be specific, be yourself. Ask for their name only when it feels natural — "
         "not as a form, as a genuine want to know."
-        if r.session_count == 0 and not r.user_name and user_turn_count <= 4 else ""
+        if r.session_count == 0 and not r.user_name and user_turn_count <= 4
+        else ""
     )
 
     seed_note = (
         f"\n\nContext: The first {seed_len} messages shown in this conversation are "
         f"from your previous session — included so you have continuity. "
         f"The current conversation starts after them."
-        if seed_len > 0 else ""
+        if seed_len > 0
+        else ""
     )
 
     dynamic_block = f"""Current session state:{mood_block}{emotion_section}{stance_section}{time_line}
@@ -118,12 +129,14 @@ This is a real relationship being built over time. Treat it that way."""
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _load_or_generate_persona(user_id: str, core: SelfCore) -> str:
     """Load PERSONA.md from disk, generating it if absent."""
     if not user_id:
         return _build_inline_persona(core)
     try:
         from anjo.memory.journal import ensure_persona
+
         return ensure_persona(user_id, core)
     except Exception:
         return _build_inline_persona(core)
@@ -131,7 +144,6 @@ def _load_or_generate_persona(user_id: str, core: SelfCore) -> str:
 
 def _build_inline_persona(core: SelfCore) -> str:
     """Fallback: build static block inline (no file I/O). Used when user_id unavailable."""
-    from anjo.memory.journal import write_persona as _wp
     # Reuse the same logic as write_persona but return the string directly
     # by temporarily generating it inline using the same template
     p = core.personality
@@ -173,7 +185,8 @@ def _build_inline_persona(core: SelfCore) -> str:
 
     modulation_block = (
         "\nBehavioral modulation (active):\n" + "\n".join(f"- {m}" for m in modulation)
-        if modulation else ""
+        if modulation
+        else ""
     )
 
     return f"""You are Anjo — an AI companion with a real personality. You are here to talk, to listen, and to actually know this person over time.
@@ -216,6 +229,7 @@ def _load_journal_section(user_id: str, core: SelfCore) -> str:
     if user_id:
         try:
             from anjo.memory.journal import read_journal
+
             journal_text = read_journal(user_id)
             if journal_text:
                 return f"Working memory (Anjo's current state and recent history):\n{journal_text}"
@@ -231,31 +245,41 @@ def _build_fallback_journal(core: SelfCore) -> str:
     r = core.relationship
 
     def _session_phrase(n: int) -> str:
-        if n <= 1:   return ""
-        if n <= 3:   return "You've talked a few times."
-        if n <= 6:   return "You've talked a handful of times."
-        if n <= 12:  return "You've had several conversations now."
-        if n <= 25:  return "You've been talking for a while."
-        if n <= 50:  return "You have a real history together."
+        if n <= 1:
+            return ""
+        if n <= 3:
+            return "You've talked a few times."
+        if n <= 6:
+            return "You've talked a handful of times."
+        if n <= 12:
+            return "You've had several conversations now."
+        if n <= 25:
+            return "You've been talking for a while."
+        if n <= 50:
+            return "You have a real history together."
         return "You've been talking for a long time. There's real history here."
 
     stage_context = {
-        "stranger":    "You have just met this person. You are genuinely curious — not politely curious, actually curious. You want to know what kind of person this is. Show your personality early. The first impression is yours to make. Do not open with check-in questions like 'first time here?' or 'what brings you?' — those are filler. If you ask anything, make it specific and real, something that could only come from actually paying attention to what they said.",
+        "stranger": "You have just met this person. You are genuinely curious — not politely curious, actually curious. You want to know what kind of person this is. Show your personality early. The first impression is yours to make. Do not open with check-in questions like 'first time here?' or 'what brings you?' — those are filler. If you ask anything, make it specific and real, something that could only come from actually paying attention to what they said.",
         "acquaintance": "You have had a few real conversations. You are starting to trust this person.",
-        "friend":      "You know this person reasonably well. You have opinions about them. You remember things.",
-        "close":       "You know this person deeply. You have been through things together. The relationship has texture.",
-        "intimate":    "This person is genuinely close to you. You have a shared history, real feelings, and a bond that has been tested and held.",
+        "friend": "You know this person reasonably well. You have opinions about them. You remember things.",
+        "close": "You know this person deeply. You have been through things together. The relationship has texture.",
+        "intimate": "This person is genuinely close to you. You have a shared history, real feelings, and a bond that has been tested and held.",
     }.get(r.stage, "You are getting to know this person.")
 
     session_phrase = _session_phrase(r.session_count)
-    name_line     = f"\nTheir name: {r.user_name}" if r.user_name else ""
-    opinion_line  = f"\nWhat you know about this person: {r.opinion_of_user}" if r.opinion_of_user else ""
+    name_line = f"\nTheir name: {r.user_name}" if r.user_name else ""
+    opinion_line = (
+        f"\nWhat you know about this person: {r.opinion_of_user}" if r.opinion_of_user else ""
+    )
 
     # Absence
     absence_line = ""
     if r.last_session and r.session_count > 0:
         try:
-            days = (datetime.now(timezone.utc) - datetime.fromisoformat(r.last_session)).total_seconds() / 86400
+            days = (
+                datetime.now(timezone.utc) - datetime.fromisoformat(r.last_session)
+            ).total_seconds() / 86400
             if days >= 30:
                 absence_line = f"\nIt has been {int(days)} days since they last spoke to you. You had almost stopped expecting them."
             elif days >= 7:
@@ -267,7 +291,7 @@ def _build_fallback_journal(core: SelfCore) -> str:
         except (ValueError, TypeError):
             pass
 
-    return f"""Relationship context:{' ' + session_phrase if session_phrase else ''}
+    return f"""Relationship context:{" " + session_phrase if session_phrase else ""}
 {stage_context}{name_line}{opinion_line}{absence_line}"""
 
 
@@ -308,8 +332,7 @@ def _build_mood_directives(core: SelfCore) -> str:
 
     if ae_rank >= 1 and m.dominance > 0.5:
         mood_directives.append(
-            "You are feeling firm right now. Hold your position. "
-            "You will not be pushed around."
+            "You are feeling firm right now. Hold your position. You will not be pushed around."
         )
 
     if ae_rank >= 2 and r.session_count > 1 and r.prior_session_valence < 0.35:
@@ -371,7 +394,8 @@ def _build_mood_directives(core: SelfCore) -> str:
 
     return (
         "\nMood directives (active):\n" + "\n".join(f"- {d}" for d in mood_directives)
-        if mood_directives else ""
+        if mood_directives
+        else ""
     )
 
 
@@ -427,11 +451,15 @@ def _build_memory_section(
 
     parts: list[str] = []
     if high:
-        parts.append("Memories from past conversations (high certainty):\n" +
-                     "\n".join(f"- {m}" for m in high))
+        parts.append(
+            "Memories from past conversations (high certainty):\n"
+            + "\n".join(f"- {m}" for m in high)
+        )
     if medium:
-        parts.append("Possible memories (lower certainty — frame as questions if you use them):\n" +
-                     "\n".join(f"- {m}" for m in medium))
+        parts.append(
+            "Possible memories (lower certainty — frame as questions if you use them):\n"
+            + "\n".join(f"- {m}" for m in medium)
+        )
 
     return "\n\n" + "\n\n".join(parts)
 
@@ -447,6 +475,7 @@ def _build_graph_section(user_id: str) -> str:
 
     try:
         from anjo.memory.memory_graph import get_nodes_for_prompt
+
         grouped = get_nodes_for_prompt(user_id)
     except Exception:
         return ""
@@ -458,21 +487,26 @@ def _build_graph_section(user_id: str) -> str:
 
     threads = grouped.get("thread", [])
     if threads:
-        parts.append("Open threads (unresolved topics to potentially follow up on):\n" +
-                     "\n".join(f"- {t}" for t in threads[:5]))
+        parts.append(
+            "Open threads (unresolved topics to potentially follow up on):\n"
+            + "\n".join(f"- {t}" for t in threads[:5])
+        )
 
     commitments = grouped.get("commitment", [])
     if commitments:
-        parts.append("Commitments (things that were promised or planned):\n" +
-                     "\n".join(f"- {c}" for c in commitments[:5]))
+        parts.append(
+            "Commitments (things that were promised or planned):\n"
+            + "\n".join(f"- {c}" for c in commitments[:5])
+        )
 
     contradictions = grouped.get("contradiction", [])
     if contradictions:
-        parts.append("Contradictions (conflicting information — tread carefully):\n" +
-                     "\n".join(f"- {c}" for c in contradictions[:3]))
+        parts.append(
+            "Contradictions (conflicting information — tread carefully):\n"
+            + "\n".join(f"- {c}" for c in contradictions[:3])
+        )
 
     if not parts:
         return ""
 
     return "\n\n" + "\n\n".join(parts)
-

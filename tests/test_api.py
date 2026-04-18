@@ -1,11 +1,11 @@
 """Tests — core API endpoints (self-core, billing, memory, story, admin)."""
-from __future__ import annotations
 
+from __future__ import annotations
 
 # ── Self-Core ─────────────────────────────────────────────────────────────────
 
-class TestSelfCore:
 
+class TestSelfCore:
     def test_returns_dict(self, auth_client):
         r = auth_client.get("/api/self-core")
         assert r.status_code == 200
@@ -25,8 +25,8 @@ class TestSelfCore:
 
 # ── Billing ───────────────────────────────────────────────────────────────────
 
-class TestBilling:
 
+class TestBilling:
     def test_status_structure(self, auth_client):
         r = auth_client.get("/api/billing/status")
         assert r.status_code == 200
@@ -45,6 +45,7 @@ class TestBilling:
 
     def test_free_tier_daily_limit(self, auth_client):
         from anjo.core.subscription import FREE_DAILY_LIMIT
+
         d = auth_client.get("/api/billing/status").json()
         assert d["daily_limit"] == FREE_DAILY_LIMIT
 
@@ -62,8 +63,8 @@ class TestBilling:
 
 # ── Memory ────────────────────────────────────────────────────────────────────
 
-class TestMemory:
 
+class TestMemory:
     def test_reflection_log_structure(self, auth_client):
         r = auth_client.get("/api/reflection-log")
         assert r.status_code == 200
@@ -86,8 +87,8 @@ class TestMemory:
 
 # ── Story ─────────────────────────────────────────────────────────────────────
 
-class TestStory:
 
+class TestStory:
     def test_sessions_structure(self, auth_client):
         r = auth_client.get("/api/story/sessions")
         assert r.status_code == 200
@@ -113,21 +114,19 @@ class TestStory:
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
 
-class TestAdmin:
 
+class TestAdmin:
     def test_users_lists_registered_users(self, client):
         # Register two users
         for u in [("alpha", "alpha@test.com"), ("beta", "beta@test.com")]:
-            client.post("/register", data={
-                "username": u[0], "password": "pass1234", "email": u[1]
-            })
+            client.post("/register", data={"username": u[0], "password": "pass1234", "email": u[1]})
         r = client.get("/api/admin/users", headers={"X-Admin-Key": "test_admin_key"})
         assert r.status_code == 200
         d = r.json()
         assert d["total"] == 2
         names = {u["username"] for u in d["users"]}
         assert "alpha" in names
-        assert "beta"  in names
+        assert "beta" in names
 
     def test_users_response_fields(self, auth_client):
         r = auth_client.get("/api/admin/users", headers={"X-Admin-Key": "test_admin_key"})
@@ -135,20 +134,20 @@ class TestAdmin:
         users = r.json()["users"]
         assert len(users) == 1
         u = users[0]
-        assert "user_id"         in u
-        assert "username"        in u
-        assert "email"           in u
-        assert "email_verified"  in u
-        assert "created_at"      in u
-        assert "tier"            in u
-        assert "balance_usd"     in u
+        assert "user_id" in u
+        assert "username" in u
+        assert "email" in u
+        assert "email_verified" in u
+        assert "created_at" in u
+        assert "tier" in u
+        assert "balance_usd" in u
         assert "message_credits" in u
-        assert "daily_used"      in u
-        assert "daily_limit"     in u
-        assert "has_self_core"   in u
-        assert "has_memories"    in u
-        assert "data_size_kb"    in u
-        assert "is_active"       in u
+        assert "daily_used" in u
+        assert "daily_limit" in u
+        assert "has_self_core" in u
+        assert "has_memories" in u
+        assert "data_size_kb" in u
+        assert "is_active" in u
         assert "hashed_password" not in u  # must never leak
 
     def test_no_password_leakage(self, auth_client):
@@ -158,9 +157,10 @@ class TestAdmin:
             assert "password" not in user
 
     def test_stats_counts(self, client):
-        client.post("/register", data={
-            "username": "gamma", "password": "pass1234", "email": "gamma@test.com"
-        })
+        client.post(
+            "/register",
+            data={"username": "gamma", "password": "pass1234", "email": "gamma@test.com"},
+        )
         d = client.get("/api/admin/users", headers={"X-Admin-Key": "test_admin_key"}).json()
         assert d["total"] == 1
         assert d["active_sessions"] == 0
@@ -185,9 +185,10 @@ class TestAdminActions:
     """Per-user admin control endpoints."""
 
     def _uid(self, client):
-        client.post("/register", data={
-            "username": "actionuser", "password": "pass1234", "email": "action@test.com"
-        })
+        client.post(
+            "/register",
+            data={"username": "actionuser", "password": "pass1234", "email": "action@test.com"},
+        )
         d = client.get("/api/admin/users", headers={"X-Admin-Key": "test_admin_key"}).json()
         return d["users"][0]["user_id"]
 
@@ -197,7 +198,9 @@ class TestAdminActions:
         assert r.status_code == 200
         assert r.json()["ok"] is True
         # Confirm verified in user list
-        users = client.get("/api/admin/users", headers={"X-Admin-Key": "test_admin_key"}).json()["users"]
+        users = client.get("/api/admin/users", headers={"X-Admin-Key": "test_admin_key"}).json()[
+            "users"
+        ]
         u = next(u for u in users if u["user_id"] == uid)
         assert u["email_verified"] is True
 
@@ -252,18 +255,24 @@ class TestAdminActions:
 
     def test_self_core_endpoint(self, client):
         uid = self._uid(client)
-        r = client.get(f"/api/admin/users/{uid}/self-core", headers={"X-Admin-Key": "test_admin_key"})
+        r = client.get(
+            f"/api/admin/users/{uid}/self-core", headers={"X-Admin-Key": "test_admin_key"}
+        )
         assert r.status_code == 200
         d = r.json()
         assert "data" in d
 
     def test_delete_user(self, client):
         uid = self._uid(client)
-        r = client.request("DELETE", f"/api/admin/users/{uid}", headers={"X-Admin-Key": "test_admin_key"})
+        r = client.request(
+            "DELETE", f"/api/admin/users/{uid}", headers={"X-Admin-Key": "test_admin_key"}
+        )
         assert r.status_code == 200
         assert r.json()["ok"] is True
         # User should be gone
-        users = client.get("/api/admin/users", headers={"X-Admin-Key": "test_admin_key"}).json()["users"]
+        users = client.get("/api/admin/users", headers={"X-Admin-Key": "test_admin_key"}).json()[
+            "users"
+        ]
         assert all(u["user_id"] != uid for u in users)
 
     def test_delete_user_wrong_key(self, client):
@@ -274,8 +283,8 @@ class TestAdminActions:
 
 # ── Rate limiting ─────────────────────────────────────────────────────────────
 
-class TestRateLimit:
 
+class TestRateLimit:
     def test_auth_rate_limit_shape(self, client):
         """After enough bad logins, server returns 429 with Retry-After."""
         for _ in range(12):
@@ -288,8 +297,8 @@ class TestRateLimit:
 
 # ── Session usage ─────────────────────────────────────────────────────────────
 
-class TestSessionUsage:
 
+class TestSessionUsage:
     def test_session_usage_structure(self, auth_client):
         r = auth_client.get("/api/session/usage")
         assert r.status_code == 200

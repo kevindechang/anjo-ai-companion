@@ -6,17 +6,20 @@ negation ("not happy") and basic sarcasm ("oh great") that keyword lists miss.
 
 No API calls — runs synchronously in <5ms before every LLM request.
 """
+
 from __future__ import annotations
 
 import logging
 import re
 import threading
+
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 logger = logging.getLogger(__name__)
 
 _vader: SentimentIntensityAnalyzer | None = None
 _vader_lock = threading.Lock()
+
 
 def _get_vader() -> SentimentIntensityAnalyzer:
     global _vader
@@ -30,68 +33,199 @@ def _get_vader() -> SentimentIntensityAnalyzer:
 # ── Keyword sets (structural signals only) ────────────────────────────────────
 
 _AGGRESSIVE_WORDS = {
-    "wtf", "stupid", "idiot", "dumb", "shut up", "shut the", "useless",
-    "worthless", "pathetic", "garbage", "trash", "terrible", "awful",
-    "hate you", "hate this", "worst", "disgusting", "horrible", "moron",
-    "loser", "shut it",
+    "wtf",
+    "stupid",
+    "idiot",
+    "dumb",
+    "shut up",
+    "shut the",
+    "useless",
+    "worthless",
+    "pathetic",
+    "garbage",
+    "trash",
+    "terrible",
+    "awful",
+    "hate you",
+    "hate this",
+    "worst",
+    "disgusting",
+    "horrible",
+    "moron",
+    "loser",
+    "shut it",
 }
 
 _VULNERABLE_WORDS = {
-    "struggle", "struggling", "sad", "depressed", "depression", "anxiety",
-    "anxious", "lonely", "alone", "scared", "afraid", "fear", "crying",
-    "cry", "hurt", "pain", "broken", "lost", "hopeless", "overwhelmed",
+    "struggle",
+    "struggling",
+    "sad",
+    "depressed",
+    "depression",
+    "anxiety",
+    "anxious",
+    "lonely",
+    "alone",
+    "scared",
+    "afraid",
+    "fear",
+    "crying",
+    "cry",
+    "hurt",
+    "pain",
+    "broken",
+    "lost",
+    "hopeless",
+    "overwhelmed",
     "exhausted",
 }
 
 # Phrases that can't be caught by word-set intersection
 _VULNERABLE_PHRASES = [
-    "tired of", "can't cope", "falling apart", "not okay", "bad day",
-    "hard time", "difficult time", "going through", "don't know how",
-    "can't handle", "can't do this", "feel empty", "feel numb",
+    "tired of",
+    "can't cope",
+    "falling apart",
+    "not okay",
+    "bad day",
+    "hard time",
+    "difficult time",
+    "going through",
+    "don't know how",
+    "can't handle",
+    "can't do this",
+    "feel empty",
+    "feel numb",
 ]
 
 _CASUAL_PATTERNS = {
-    "ok", "okay", "k", "sure", "yeah", "yep", "yes", "no",
-    "cool", "nice", "good", "right", "true", "fine",
+    "ok",
+    "okay",
+    "k",
+    "sure",
+    "yeah",
+    "yep",
+    "yes",
+    "no",
+    "cool",
+    "nice",
+    "good",
+    "right",
+    "true",
+    "fine",
 }
 
 _NEGLECT_PATTERNS = {
-    "meh", "idk", "whatever", "lol", "haha", "hmm", "uh", "eh",
-    "nope", "nah",
+    "meh",
+    "idk",
+    "whatever",
+    "lol",
+    "haha",
+    "hmm",
+    "uh",
+    "eh",
+    "nope",
+    "nah",
 }
 
 _CHALLENGE_SIGNALS = {
-    "actually", "disagree", "wrong", "incorrect", "not true", "no but",
-    "i don't think", "i doubt", "prove it", "are you sure", "really though",
-    "but wait", "but actually", "that's not", "you're wrong",
-    "not sure i agree", "i'm not sure about that", "i don't agree",
-    "i disagree", "don't think so", "i would push back",
+    "actually",
+    "disagree",
+    "wrong",
+    "incorrect",
+    "not true",
+    "no but",
+    "i don't think",
+    "i doubt",
+    "prove it",
+    "are you sure",
+    "really though",
+    "but wait",
+    "but actually",
+    "that's not",
+    "you're wrong",
+    "not sure i agree",
+    "i'm not sure about that",
+    "i don't agree",
+    "i disagree",
+    "don't think so",
+    "i would push back",
 }
 
 _COMMAND_STARTS = {
-    "do this", "do it", "just do", "tell me", "give me", "make it",
-    "you must", "you have to", "you need to", "answer me", "answer this",
-    "stop being", "be more", "don't do", "don't say", "never say",
-    "always do", "simply", "just answer", "just say", "quickly",
+    "do this",
+    "do it",
+    "just do",
+    "tell me",
+    "give me",
+    "make it",
+    "you must",
+    "you have to",
+    "you need to",
+    "answer me",
+    "answer this",
+    "stop being",
+    "be more",
+    "don't do",
+    "don't say",
+    "never say",
+    "always do",
+    "simply",
+    "just answer",
+    "just say",
+    "quickly",
 }
 
 _APOLOGY_WORDS = {
-    "sorry", "apologize", "apologies", "my bad", "i was wrong",
-    "forgive me", "i apologize", "i'm sorry", "im sorry", "my fault",
-    "i shouldn't have", "that was wrong", "i regret",
+    "sorry",
+    "apologize",
+    "apologies",
+    "my bad",
+    "i was wrong",
+    "forgive me",
+    "i apologize",
+    "i'm sorry",
+    "im sorry",
+    "my fault",
+    "i shouldn't have",
+    "that was wrong",
+    "i regret",
 }
 
 _DEEP_THEORY_WORDS = {
-    "theory", "hypothesis", "philosophy", "philosophical", "consciousness",
-    "metaphysics", "ontology", "epistemology", "paradox", "ethics",
-    "determinism", "existential", "cognitive", "framework", "paradigm",
-    "dialectic", "phenomenology", "subjective", "objective", "emergent",
-    "complexity", "systems thinking", "first principles", "abstract",
-    "conceptual", "underlying", "fundamentally", "mechanism", "causality",
+    "theory",
+    "hypothesis",
+    "philosophy",
+    "philosophical",
+    "consciousness",
+    "metaphysics",
+    "ontology",
+    "epistemology",
+    "paradox",
+    "ethics",
+    "determinism",
+    "existential",
+    "cognitive",
+    "framework",
+    "paradigm",
+    "dialectic",
+    "phenomenology",
+    "subjective",
+    "objective",
+    "emergent",
+    "complexity",
+    "systems thinking",
+    "first principles",
+    "abstract",
+    "conceptual",
+    "underlying",
+    "fundamentally",
+    "mechanism",
+    "causality",
 }
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _is_vulnerable(lower: str, words: set[str]) -> bool:
     if words & _VULNERABLE_WORDS:
@@ -120,10 +254,11 @@ def _vader_valence(text: str) -> float:
     and mixed sentiment — all things keyword lists miss.
     """
     compound = _get_vader().polarity_scores(text)["compound"]  # -1.0 to 1.0
-    return round((compound + 1.0) / 2.0, 3)             # → 0.0 to 1.0
+    return round((compound + 1.0) / 2.0, 3)  # → 0.0 to 1.0
 
 
 # ── Public classifiers ────────────────────────────────────────────────────────
+
 
 def classify_input(text: str) -> tuple[str, float]:
     """Classify user message and return (input_type, valence).
@@ -180,10 +315,20 @@ _INTENT_SYSTEM = (
     "CASUAL — light, conversational, no strong emotional charge, small talk, just being present"
 )
 
-_VALID_INTENTS = {"ABUSE", "APOLOGY", "VULNERABILITY", "CURIOSITY", "CHALLENGE", "NEGLECT", "CASUAL"}
+_VALID_INTENTS = {
+    "ABUSE",
+    "APOLOGY",
+    "VULNERABILITY",
+    "CURIOSITY",
+    "CHALLENGE",
+    "NEGLECT",
+    "CASUAL",
+}
 
 
-def classify_intent_llm(text: str, user_id: str | None = None, session_id: str | None = None) -> str:
+def classify_intent_llm(
+    text: str, user_id: str | None = None, session_id: str | None = None
+) -> str:
     """Classify user intent via Haiku. Falls back to rule-based on any failure.
 
     Keeps the hardcoded ABUSE pre-filter (fast, safety-critical).
@@ -194,16 +339,19 @@ def classify_intent_llm(text: str, user_id: str | None = None, session_id: str |
     if _is_abuse(text, lower):
         return "ABUSE"
 
-    from anjo.core.llm import get_client, MODEL_BACKGROUND
+    from anjo.core.llm import MODEL_BACKGROUND, get_client
+
     try:
         resp = get_client().messages.create(
             model=MODEL_BACKGROUND,
             max_tokens=10,
-            system=[{"type": "text", "text": _INTENT_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+            system=[
+                {"type": "text", "text": _INTENT_SYSTEM, "cache_control": {"type": "ephemeral"}}
+            ],
             messages=[{"role": "user", "content": text}],
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         )
-        if not resp.content or not hasattr(resp.content[0], 'text'):
+        if not resp.content or not hasattr(resp.content[0], "text"):
             logger.warning(
                 "classify_intent_llm: unexpected LLM response, falling back (user_id=%s session_id=%s)",
                 user_id,

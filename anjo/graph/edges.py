@@ -1,4 +1,5 @@
 """Conditional edge functions for the Anjo conversation graph."""
+
 from __future__ import annotations
 
 from anjo.graph.state import AnjoState

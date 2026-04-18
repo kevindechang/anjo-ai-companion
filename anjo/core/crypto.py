@@ -13,6 +13,7 @@ Backward-compat sentinel:
   DB fields  — plaintext is stored as-is; encrypted values start with "enc1:"
   Files      — plaintext files have arbitrary bytes; encrypted files start with b"\\xAE\\x01"
 """
+
 from __future__ import annotations
 
 import base64
@@ -26,7 +27,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-_FILE_MAGIC = b"\xAE\x01"
+_FILE_MAGIC = b"\xae\x01"
 _FIELD_PREFIX = "enc1:"
 _NONCE_SIZE = 12
 
@@ -47,6 +48,7 @@ def _get_key(info: bytes) -> bytes:
             secret = "dev_fallback_key_not_for_production"
         elif len(secret) < 32:
             import logging
+
             logging.getLogger(__name__).warning(
                 "ANJO_SECRET is short (%d chars). Use ≥ 32 chars for production.",
                 len(secret),
@@ -71,19 +73,19 @@ def verify_production_key() -> None:
         return  # Properly configured
     if secret and len(secret) < 32:
         import logging
+
         logging.getLogger(__name__).warning(
             "⚠️  ANJO_SECRET is short (%d chars). Minimum 32 recommended.", len(secret)
         )
         return
     # No secret set
     if os.environ.get("ANJO_ENV", "") != "dev":
-        raise RuntimeError(
-            "ANJO_SECRET is not set. Required for production."
-        )
+        raise RuntimeError("ANJO_SECRET is not set. Required for production.")
     # Dev mode — warn if user data already exists
     _users_dir = Path(__file__).parent.parent.parent / "data" / "users"
     if _users_dir.exists() and any(_users_dir.iterdir()):
         import logging
+
         logging.getLogger(__name__).warning(
             "⚠️  Using dev fallback encryption key with existing user data. "
             "Set ANJO_SECRET for production use."
@@ -108,6 +110,7 @@ def _hmac_key() -> bytes:
 
 # ── DB column encryption ──────────────────────────────────────────────────────
 
+
 def encrypt_db(plaintext: str) -> str:
     """AES-256-GCM encrypt a string for DB storage.
 
@@ -129,12 +132,13 @@ def decrypt_db(value: str) -> str:
     """
     if not value or not value.startswith(_FIELD_PREFIX):
         return value
-    blob = base64.b64decode(value[len(_FIELD_PREFIX):])
+    blob = base64.b64decode(value[len(_FIELD_PREFIX) :])
     nonce, ct = blob[:_NONCE_SIZE], blob[_NONCE_SIZE:]
     return AESGCM(_db_key()).decrypt(nonce, ct, None).decode()
 
 
 # ── ChromaDB document encryption ─────────────────────────────────────────────
+
 
 def encrypt_chroma(plaintext: str) -> str:
     """Encrypt a ChromaDB document string using the chroma sub-key."""
@@ -149,12 +153,13 @@ def decrypt_chroma(value: str) -> str:
     """Decrypt a ChromaDB document string. Returns plaintext if not encrypted (legacy)."""
     if not value or not value.startswith(_FIELD_PREFIX):
         return value
-    blob = base64.b64decode(value[len(_FIELD_PREFIX):])
+    blob = base64.b64decode(value[len(_FIELD_PREFIX) :])
     nonce, ct = blob[:_NONCE_SIZE], blob[_NONCE_SIZE:]
     return AESGCM(_chroma_key()).decrypt(nonce, ct, None).decode()
 
 
 # ── File encryption ───────────────────────────────────────────────────────────
+
 
 def write_encrypted(content: str) -> bytes:
     """Encrypt content to bytes for file storage.
@@ -175,12 +180,13 @@ def read_encrypted(path: Path) -> str:
     data = path.read_bytes()
     if not data.startswith(_FILE_MAGIC):
         return data.decode("utf-8")
-    blob = data[len(_FILE_MAGIC):]
+    blob = data[len(_FILE_MAGIC) :]
     nonce, ct = blob[:_NONCE_SIZE], blob[_NONCE_SIZE:]
     return AESGCM(_files_key()).decrypt(nonce, ct, None).decode()
 
 
 # ── Blind index ───────────────────────────────────────────────────────────────
+
 
 def hmac_index(value: str) -> str:
     """HMAC-SHA256(blind-index key, value.lower()) as hex.
@@ -193,10 +199,8 @@ def hmac_index(value: str) -> str:
 
 # ── PII scrubbing ─────────────────────────────────────────────────────────────
 
-_EMAIL_PAT = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b')
-_PHONE_PAT = re.compile(
-    r'(?<!\d)(\+?1[\s.\-]?)?(\(?\d{3}\)?[\s.\-]?)\d{3}[\s.\-]?\d{4}(?!\d)'
-)
+_EMAIL_PAT = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+_PHONE_PAT = re.compile(r"(?<!\d)(\+?1[\s.\-]?)?(\(?\d{3}\)?[\s.\-]?)\d{3}[\s.\-]?\d{4}(?!\d)")
 
 
 def scrub_pii(text: str) -> str:
@@ -204,6 +208,6 @@ def scrub_pii(text: str) -> str:
 
     Used before computing embeddings so PII is not encoded into vectors.
     """
-    text = _EMAIL_PAT.sub('[EMAIL]', text)
-    text = _PHONE_PAT.sub('[PHONE]', text)
+    text = _EMAIL_PAT.sub("[EMAIL]", text)
+    text = _PHONE_PAT.sub("[PHONE]", text)
     return text

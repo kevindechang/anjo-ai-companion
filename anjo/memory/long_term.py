@@ -11,6 +11,7 @@ Migration note: existing data in the legacy "semantic_memories" / "emotional_mem
 global collections is not automatically migrated. Run scripts/migration_v2.py to
 move existing vectors into per-user collections before switching production over.
 """
+
 from __future__ import annotations
 
 import json
@@ -20,7 +21,7 @@ from pathlib import Path
 import chromadb
 
 from anjo.core.crypto import decrypt_chroma, encrypt_chroma, scrub_pii
-from anjo.memory.embedder import embed_semantic, embed_emotional
+from anjo.memory.embedder import embed_emotional, embed_semantic
 
 _DATA_ROOT = Path(__file__).parent.parent.parent / "data"
 
@@ -79,8 +80,12 @@ def store_memory(
     emo_vec = embed_emotional(scrubbed)
 
     encrypted_summary = encrypt_chroma(summary)
-    semantic_col.upsert(ids=[memory_id], embeddings=[sem_vec], documents=[encrypted_summary], metadatas=[metadata])
-    emotional_col.upsert(ids=[memory_id], embeddings=[emo_vec], documents=[encrypted_summary], metadatas=[metadata])
+    semantic_col.upsert(
+        ids=[memory_id], embeddings=[sem_vec], documents=[encrypted_summary], metadatas=[metadata]
+    )
+    emotional_col.upsert(
+        ids=[memory_id], embeddings=[emo_vec], documents=[encrypted_summary], metadatas=[metadata]
+    )
 
 
 def get_last_session_summary(user_id: str) -> str | None:
@@ -139,11 +144,13 @@ def query_memories(message: str, user_id: str, n_results: int = 4) -> list[tuple
     k = min(n_results + 4, user_count)
 
     sem_results = semantic_col.query(
-        query_embeddings=[sem_vec], n_results=k,
+        query_embeddings=[sem_vec],
+        n_results=k,
         include=["documents", "distances", "metadatas"],
     )
     emo_results = emotional_col.query(
-        query_embeddings=[emo_vec], n_results=k,
+        query_embeddings=[emo_vec],
+        n_results=k,
         include=["documents", "distances", "metadatas"],
     )
 

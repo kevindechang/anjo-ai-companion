@@ -7,6 +7,7 @@ Pydantic BaseModel: nodes receive validated model instances with attribute acces
 Graph invoke/ainvoke accepts dicts and returns dicts, so callers outside the
 graph (chat_routes.py, session_store.py) continue to work with plain dicts.
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field

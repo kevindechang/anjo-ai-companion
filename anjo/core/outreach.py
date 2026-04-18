@@ -7,6 +7,7 @@ The only hard gates are relationship stage (friend+) and a 3-day cooldown.
 The message waits as a pending file and surfaces as the first bubble when
 the user opens the app. No push infrastructure needed.
 """
+
 from __future__ import annotations
 
 import json
@@ -25,6 +26,7 @@ def _outreach_path(user_id: str) -> Path:
 
 
 # ── Hard gates (product constraints, not emotional logic) ──────────────────────
+
 
 def _cooldown_ok(core) -> bool:
     if not core.last_outreach_sent:
@@ -75,28 +77,27 @@ def _decide_and_generate(core, days_since: float) -> tuple[bool, str]:
 
     Returns (should_send, message). Message is empty string if should_send is False.
     """
-    from anjo.core.llm import get_client, MODEL_BACKGROUND
+    from anjo.core.llm import MODEL_BACKGROUND, get_client
 
     r = core.relationship
     a = core.attachment
     m = core.mood
 
-    name_line   = f"Their name: {r.user_name}" if r.user_name else "Their name: unknown."
-    opinion     = r.opinion_of_user or "no strong impression yet"
-    tone        = r.last_session_tone or "neutral"
-    days_str    = f"{days_since:.0f} days" if days_since >= 1 else "less than a day"
+    name_line = f"Their name: {r.user_name}" if r.user_name else "Their name: unknown."
+    opinion = r.opinion_of_user or "no strong impression yet"
+    tone = r.last_session_tone or "neutral"
+    days_str = f"{days_since:.0f} days" if days_since >= 1 else "less than a day"
 
     longing_desc = (
-        "strong" if a.longing > 0.6
-        else "moderate" if a.longing > 0.35
-        else "mild" if a.longing > 0.15
+        "strong"
+        if a.longing > 0.6
+        else "moderate"
+        if a.longing > 0.35
+        else "mild"
+        if a.longing > 0.15
         else "barely there"
     )
-    mood_desc = (
-        "positive" if m.valence > 0.2
-        else "subdued" if m.valence < -0.2
-        else "neutral"
-    )
+    mood_desc = "positive" if m.valence > 0.2 else "subdued" if m.valence < -0.2 else "neutral"
     drift_line = (
         f"Mood has drifted warmer than your baseline since they left ({core.inter_session_drift:+.2f})."
         if core.inter_session_drift > 0.15
@@ -110,12 +111,17 @@ def _decide_and_generate(core, days_since: float) -> tuple[bool, str]:
 
     residue_lines = ""
     if core.emotional_residue:
-        items = [f"{x.emotion} (intensity {x.intensity:.2f}, from: {x.source})" for x in core.emotional_residue]
+        items = [
+            f"{x.emotion} (intensity {x.intensity:.2f}, from: {x.source})"
+            for x in core.emotional_residue
+        ]
         residue_lines = "Emotional residue carrying forward: " + "; ".join(items)
 
     desires_line = ""
     if core.relational_desires:
-        desires_line = "What you want from this relationship: " + ", ".join(core.relational_desires[:3])
+        desires_line = "What you want from this relationship: " + ", ".join(
+            core.relational_desires[:3]
+        )
 
     user_prompt = f"""\
 Relationship stage: {r.stage}
@@ -139,7 +145,9 @@ Do you want to say something to them right now? If yes, say it. If no, return re
         response = get_client().messages.create(
             model=MODEL_BACKGROUND,
             max_tokens=160,
-            system=[{"type": "text", "text": _OUTREACH_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+            system=[
+                {"type": "text", "text": _OUTREACH_SYSTEM, "cache_control": {"type": "ephemeral"}}
+            ],
             messages=[{"role": "user", "content": user_prompt}],
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         )
@@ -157,6 +165,7 @@ Do you want to say something to them right now? If yes, say it. If no, return re
 
 
 # ── Storage and delivery ───────────────────────────────────────────────────────
+
 
 def get_pending_outreach(user_id: str) -> str | None:
     """Return the pending outreach message for this user, or None."""
@@ -178,10 +187,16 @@ def mark_delivered(user_id: str) -> None:
 def _save_pending(user_id: str, message: str) -> None:
     path = _outreach_path(user_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(write_encrypted(json.dumps({
-        "message": message,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })))
+    path.write_bytes(
+        write_encrypted(
+            json.dumps(
+                {
+                    "message": message,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+        )
+    )
 
 
 # ── First session opener ───────────────────────────────────────────────────────
@@ -216,12 +231,19 @@ def generate_first_message() -> str | None:
 
     Returns the message text, or None on failure. Caller handles storage.
     """
-    from anjo.core.llm import get_client, MODEL_BACKGROUND
+    from anjo.core.llm import MODEL_BACKGROUND, get_client
+
     try:
         response = get_client().messages.create(
             model=MODEL_BACKGROUND,
             max_tokens=80,
-            system=[{"type": "text", "text": _FIRST_MESSAGE_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+            system=[
+                {
+                    "type": "text",
+                    "text": _FIRST_MESSAGE_SYSTEM,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
             messages=[{"role": "user", "content": "Generate your opening."}],
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         )
@@ -235,6 +257,7 @@ def generate_first_message() -> str | None:
 
 
 # ── Orchestrator ───────────────────────────────────────────────────────────────
+
 
 def maybe_generate_outreach(user_id: str, core, days_since: float) -> None:
     """Let Anjo decide whether to reach out. Store message if she does.

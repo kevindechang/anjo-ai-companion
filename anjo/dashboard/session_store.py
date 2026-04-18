@@ -7,6 +7,7 @@ primary recovery mechanism.
 
 On startup, any rows in `active_sessions` are recovered automatically.
 """
+
 from __future__ import annotations
 
 import copy
@@ -32,6 +33,7 @@ def _active_session_path(user_id: str) -> Path:
 
 # ── SQLite persistence ─────────────────────────────────────────────────────────
 
+
 def _persist_to_db(user_id: str) -> None:
     """Write session state to SQLite active_sessions table."""
     # Copy data under lock; serialize and write outside to reduce contention
@@ -44,16 +46,23 @@ def _persist_to_db(user_id: str) -> None:
         last_activity = session["last_activity"]
     state_json = json.dumps(state_snapshot)
     try:
-        from anjo.core.db import get_db
         from datetime import datetime, timezone
+
+        from anjo.core.db import get_db
+
         db = get_db()
         db.execute(
             "INSERT INTO active_sessions (user_id, session_id, state_json, last_activity, created_at) "
             "VALUES (?, ?, ?, ?, ?) "
             "ON CONFLICT(user_id) DO UPDATE SET "
             "state_json = excluded.state_json, last_activity = excluded.last_activity",
-            (user_id, session_id, state_json,
-             last_activity, datetime.now(timezone.utc).isoformat()),
+            (
+                user_id,
+                session_id,
+                state_json,
+                last_activity,
+                datetime.now(timezone.utc).isoformat(),
+            ),
         )
         db.commit()
     except Exception:
@@ -65,6 +74,7 @@ def _delete_from_db(user_id: str) -> None:
     """Remove session from SQLite."""
     try:
         from anjo.core.db import get_db
+
         db = get_db()
         db.execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
         db.commit()
@@ -77,8 +87,11 @@ def _recover_from_db() -> dict[str, dict]:
     recovered = {}
     try:
         from anjo.core.db import get_db
+
         db = get_db()
-        rows = db.execute("SELECT user_id, session_id, state_json, last_activity FROM active_sessions").fetchall()
+        rows = db.execute(
+            "SELECT user_id, session_id, state_json, last_activity FROM active_sessions"
+        ).fetchall()
         for row in rows:
             try:
                 state = json.loads(row["state_json"])
@@ -96,6 +109,7 @@ def _recover_from_db() -> dict[str, dict]:
 
 
 # ── Legacy file persistence (fallback) ─────────────────────────────────────────
+
 
 def _persist_session_file(user_id: str) -> None:
     # Copy data under lock; file I/O outside to reduce contention
@@ -139,6 +153,7 @@ def _delete_persisted_session(user_id: str) -> None:
 
 # ── Session lifecycle ──────────────────────────────────────────────────────────
 
+
 def recover_sessions_on_startup() -> int:
     """Recover sessions from SQLite on server startup. Returns count recovered."""
     recovered = _recover_from_db()
@@ -147,6 +162,7 @@ def recover_sessions_on_startup() -> int:
         for user_id, session_data in recovered.items():
             if user_id not in _sessions:
                 from anjo.core.self_core import SelfCore
+
                 core = SelfCore.load(user_id)
                 state = session_data["state"]
                 state["self_core"] = core.model_dump()
@@ -175,8 +191,8 @@ def get_or_create_session(user_id: str) -> str:
             return user_id
 
     # ── Slow path: load all data OUTSIDE the lock ─────────────────────────
-    from anjo.core.self_core import SelfCore
     from anjo.core.outreach import get_pending_outreach, mark_delivered
+    from anjo.core.self_core import SelfCore
 
     core = SelfCore.load(user_id)
     persisted, persisted_seed_len = _load_persisted_session(user_id)
@@ -188,14 +204,17 @@ def get_or_create_session(user_id: str) -> str:
     seed: list[dict] = []
     if not persisted:
         from anjo.core.history import get_last_n
+
         seed = get_last_n(user_id, n=6)
 
     # First message generation (LLM call — the expensive part, must be outside lock)
     first_msg: str | None = None
     if core.relationship.session_count == 0 and not persisted and not outreach:
         from anjo.core.history import has_any_messages
+
         if not has_any_messages(user_id):
             from anjo.core.outreach import generate_first_message
+
             first_msg = generate_first_message()
             if not first_msg:
                 first_msg = "Hey — good to meet you. What's going on today?"
@@ -206,7 +225,9 @@ def get_or_create_session(user_id: str) -> str:
         if user_id in _sessions:
             return user_id
 
-        _create_session(core.model_dump(), core, user_id, cached_facts=cached_facts, cached_trends=cached_trends)
+        _create_session(
+            core.model_dump(), core, user_id, cached_facts=cached_facts, cached_trends=cached_trends
+        )
 
         # Restore persisted conversation (with correct seed_len)
         if persisted:
@@ -238,9 +259,11 @@ def get_or_create_session(user_id: str) -> str:
     if outreach:
         mark_delivered(user_id)
         from anjo.core.history import append_message as _append
+
         _append(user_id, "assistant", outreach)
     elif first_msg:
         from anjo.core.history import append_message as _append
+
         _append(user_id, "assistant", first_msg)
 
     return user_id
@@ -249,6 +272,7 @@ def get_or_create_session(user_id: str) -> str:
 def _load_user_facts(user_id: str) -> list[str]:
     try:
         from anjo.core.facts import load_facts
+
         return load_facts(user_id)
     except Exception:
         return []
@@ -256,14 +280,20 @@ def _load_user_facts(user_id: str) -> list[str]:
 
 def _load_trending_topics() -> list[str]:
     try:
+        from datetime import datetime, timedelta, timezone
+
         from anjo.core.db import get_db
-        from datetime import datetime, timezone, timedelta
+
         cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-        rows = get_db().execute(
-            "SELECT topic, COUNT(*) as cnt FROM topic_trends WHERE ts > ? "
-            "GROUP BY topic ORDER BY cnt DESC LIMIT 3",
-            (cutoff,),
-        ).fetchall()
+        rows = (
+            get_db()
+            .execute(
+                "SELECT topic, COUNT(*) as cnt FROM topic_trends WHERE ts > ? "
+                "GROUP BY topic ORDER BY cnt DESC LIMIT 3",
+                (cutoff,),
+            )
+            .fetchall()
+        )
         return [row["topic"] for row in rows]
     except Exception:
         return []
@@ -361,6 +391,7 @@ def reset_session(user_id: str) -> None:
             return
     # Load SelfCore OUTSIDE lock — file I/O should never block other sessions
     from anjo.core.self_core import SelfCore
+
     core = SelfCore.load(user_id)
     with _sessions_lock:
         if user_id not in _sessions:
@@ -420,6 +451,7 @@ def delete_session(user_id: str) -> None:
 
 # ── Public read-only session introspection ──────────────────────────────────
 
+
 def get_active_session_count() -> int:
     """Return the number of currently active in-memory sessions."""
     return len(_sessions)
@@ -445,9 +477,7 @@ def get_session_snapshot(user_id: str) -> dict[str, Any] | None:
         return copy.deepcopy(session) if session else None
 
 
-def check_and_cleanup_session(
-    user_id: str, stale_before: float
-) -> bool:
+def check_and_cleanup_session(user_id: str, stale_before: float) -> bool:
     """Atomically check if session is stale and clean up.
 
     Returns True if session was removed (or didn't exist),
@@ -468,6 +498,7 @@ def check_and_cleanup_session(
 
     # Session still active — refresh core from disk
     from anjo.core.self_core import SelfCore
+
     fresh = SelfCore.load(user_id)
     with _sessions_lock:
         sess = _sessions.get(user_id)

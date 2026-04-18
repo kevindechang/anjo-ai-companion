@@ -1,4 +1,5 @@
 """Sentence-transformer wrapper for dual embeddings (semantic + emotional)."""
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -16,7 +17,9 @@ def _get_model() -> SentenceTransformer:
     try:
         return SentenceTransformer(_SEMANTIC_MODEL)
     except Exception as exc:
-        raise RuntimeError(f"Failed to load SentenceTransformer model '{_SEMANTIC_MODEL}': {exc}") from exc
+        raise RuntimeError(
+            f"Failed to load SentenceTransformer model '{_SEMANTIC_MODEL}': {exc}"
+        ) from exc
 
 
 def embed_semantic(text: str) -> list[float]:

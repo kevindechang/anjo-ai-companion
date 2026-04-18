@@ -10,41 +10,49 @@ Covers:
 - Backwards-compat reading of old plain-string format
 - _MAX_FACTS cap applies to active facts only
 """
+
 from __future__ import annotations
 
 import json
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
+import pytest
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _store(user_id: str, facts: list[str], confidences: list[float] | None = None) -> None:
     from anjo.core.facts import merge_facts
+
     merge_facts(user_id, facts, confidences)
 
 
 def _active(user_id: str) -> list[str]:
     from anjo.core.facts import load_facts
+
     return load_facts(user_id)
 
 
 # ── Basic storage ─────────────────────────────────────────────────────────────
 
+
 def test_stored_fact_is_retrievable():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u1", ["works as a nurse"])
     assert "works as a nurse" in load_facts("u1")
 
 
 def test_empty_list_is_noop():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_empty", [])
     assert load_facts("u_empty") == []
 
 
 def test_facts_have_timestamps():
-    from anjo.core.facts import merge_facts, load_facts_with_meta
+    from anjo.core.facts import load_facts_with_meta, merge_facts
+
     before = datetime.now(timezone.utc)
     merge_facts("u_ts", ["loves hiking"])
     meta = load_facts_with_meta("u_ts")
@@ -54,7 +62,8 @@ def test_facts_have_timestamps():
 
 
 def test_newest_facts_appear_first():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_order", ["first fact"])
     merge_facts("u_order", ["second fact"])
     facts = load_facts("u_order")
@@ -64,15 +73,18 @@ def test_newest_facts_appear_first():
 
 # ── Exact-duplicate skipping ──────────────────────────────────────────────────
 
+
 def test_exact_duplicate_is_skipped():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_dup", ["has a dog named Max"])
     merge_facts("u_dup", ["has a dog named Max"])
     assert load_facts("u_dup").count("has a dog named Max") == 1
 
 
 def test_case_insensitive_duplicate_skipped():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_case", ["Works as a nurse"])
     merge_facts("u_case", ["works as a nurse"])
     assert len(load_facts("u_case")) == 1
@@ -80,8 +92,10 @@ def test_case_insensitive_duplicate_skipped():
 
 # ── Category supersession ─────────────────────────────────────────────────────
 
+
 def test_new_job_supersedes_old_job():
-    from anjo.core.facts import merge_facts, load_facts, load_facts_with_meta
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_job", ["works as a nurse"])
     merge_facts("u_job", ["works as a software engineer"])
 
@@ -91,7 +105,8 @@ def test_new_job_supersedes_old_job():
 
 
 def test_superseded_fact_has_timestamp():
-    from anjo.core.facts import merge_facts, _load_all
+    from anjo.core.facts import _load_all, merge_facts
+
     merge_facts("u_sup_ts", ["works as a nurse"])
     merge_facts("u_sup_ts", ["works as a software engineer"])
 
@@ -102,7 +117,8 @@ def test_superseded_fact_has_timestamp():
 
 
 def test_new_city_supersedes_old_city():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_city", ["lives in Tokyo"])
     merge_facts("u_city", ["moved to London"])
 
@@ -112,7 +128,8 @@ def test_new_city_supersedes_old_city():
 
 
 def test_relationship_status_supersedes():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_rel", ["single"])
     merge_facts("u_rel", ["started dating someone"])
 
@@ -122,7 +139,8 @@ def test_relationship_status_supersedes():
 
 
 def test_education_supersedes():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_edu", ["studying architecture"])
     merge_facts("u_edu", ["graduated last year"])
 
@@ -132,7 +150,8 @@ def test_education_supersedes():
 
 
 def test_unrelated_facts_do_not_supersede():
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_unrelt", ["has a dog named Biscuit"])
     merge_facts("u_unrelt", ["loves Italian food"])
 
@@ -142,7 +161,8 @@ def test_unrelated_facts_do_not_supersede():
 
 def test_different_categories_do_not_supersede():
     """A job fact should not supersede a location fact."""
-    from anjo.core.facts import merge_facts, load_facts
+    from anjo.core.facts import load_facts, merge_facts
+
     merge_facts("u_cross", ["lives in Seoul"])
     merge_facts("u_cross", ["works as a developer"])
 
@@ -152,8 +172,10 @@ def test_different_categories_do_not_supersede():
 
 # ── Cap behaviour ─────────────────────────────────────────────────────────────
 
+
 def test_active_facts_capped_at_max():
-    from anjo.core.facts import merge_facts, load_facts, _MAX_FACTS
+    from anjo.core.facts import _MAX_FACTS, load_facts, merge_facts
+
     for i in range(_MAX_FACTS + 5):
         merge_facts("u_cap", [f"unique fact number {i}"])
     assert len(load_facts("u_cap")) <= _MAX_FACTS
@@ -161,8 +183,10 @@ def test_active_facts_capped_at_max():
 
 # ── Confidence ────────────────────────────────────────────────────────────────
 
+
 def test_confidence_stored_and_retrieved():
-    from anjo.core.facts import merge_facts, load_facts_with_confidence
+    from anjo.core.facts import load_facts_with_confidence, merge_facts
+
     merge_facts("u_conf", ["might be studying medicine"], confidences=[0.6])
     pairs = load_facts_with_confidence("u_conf")
     assert pairs
@@ -171,6 +195,7 @@ def test_confidence_stored_and_retrieved():
 
 
 # ── Backwards compatibility ───────────────────────────────────────────────────
+
 
 def test_reads_old_plain_string_format(tmp_path, monkeypatch):
     """Existing rows stored as plain JSON string arrays should still load correctly."""
@@ -206,7 +231,7 @@ def test_old_format_migrates_to_new_on_merge(tmp_path, monkeypatch):
     """After merge_facts on an old-format row, subsequent reads use new format."""
     import anjo.core.db as _db
     from anjo.core.crypto import encrypt_db
-    from anjo.core.facts import merge_facts, load_facts_with_meta
+    from anjo.core.facts import load_facts_with_meta, merge_facts
 
     db = _db.get_db()
     old_facts = json.dumps(["legacy fact"])

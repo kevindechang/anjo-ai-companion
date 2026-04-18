@@ -1,10 +1,11 @@
 """Email sending via Resend API."""
+
 from __future__ import annotations
 
 import json
 import os
-import urllib.request
 import urllib.error
+import urllib.request
 
 from anjo.core.logger import logger
 
@@ -35,12 +36,14 @@ def send_verification_email(to_email: str, username: str, token: str) -> bool:
     </div>
     """
 
-    payload = json.dumps({
-        "from": "Anjo <noreply@your-domain.com>",
-        "to": [to_email],
-        "subject": "Verify your Anjo account",
-        "html": html,
-    }).encode()
+    payload = json.dumps(
+        {
+            "from": "Anjo <noreply@your-domain.com>",
+            "to": [to_email],
+            "subject": "Verify your Anjo account",
+            "html": html,
+        }
+    ).encode()
 
     req = urllib.request.Request(
         "https://api.resend.com/emails",
@@ -66,7 +69,7 @@ def send_verification_email(to_email: str, username: str, token: str) -> bool:
 
 def send_reset_email(to_email: str, username: str, token: str) -> bool:
     """Send password reset link. Returns True on success."""
-    api_key  = os.environ.get("RESEND_API_KEY", "")
+    api_key = os.environ.get("RESEND_API_KEY", "")
     base_url = os.environ.get("ANJO_BASE_URL", "https://your-domain.com")
 
     if not api_key:
@@ -90,12 +93,14 @@ def send_reset_email(to_email: str, username: str, token: str) -> bool:
     </div>
     """
 
-    payload = json.dumps({
-        "from": "Anjo <noreply@your-domain.com>",
-        "to": [to_email],
-        "subject": "Reset your Anjo password",
-        "html": html,
-    }).encode()
+    payload = json.dumps(
+        {
+            "from": "Anjo <noreply@your-domain.com>",
+            "to": [to_email],
+            "subject": "Reset your Anjo password",
+            "html": html,
+        }
+    ).encode()
 
     req = urllib.request.Request(
         "https://api.resend.com/emails",

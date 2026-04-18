@@ -3,14 +3,15 @@
 Nodes receive an AnjoState Pydantic model instance and return partial dicts.
 LangGraph merges the returned dict into the accumulated state.
 """
+
 from __future__ import annotations
 
-from anjo.core.llm import get_client, MODEL
-from anjo.core.self_core import SelfCore
+from anjo.core.llm import MODEL, get_client
+from anjo.core.logger import logger
 from anjo.core.prompt_builder import build_system_prompt
+from anjo.core.self_core import SelfCore
 from anjo.graph.state import AnjoState
 from anjo.memory.retrieval_classifier import should_retrieve
-from anjo.core.logger import logger
 
 
 def _coerce_llm_bool(value, default: bool) -> bool:
@@ -43,11 +44,11 @@ def classify_node(state: AnjoState) -> dict:
 
 
 _OCC_CARRY_DECAY = {
-    "reproach":   0.70,  # blame fades slowly — still ~34% after 3 turns
-    "distress":   0.80,  # hurt fades moderately
+    "reproach": 0.70,  # blame fades slowly — still ~34% after 3 turns
+    "distress": 0.80,  # hurt fades moderately
     "admiration": 0.85,  # positive agent-appraisal fades faster than negative
-    "gratitude":  0.88,  # gratitude lingers — being trusted/thanked stays present
-    "joy":        0.90,  # positive event-emotion dissipates quickest
+    "gratitude": 0.88,  # gratitude lingers — being trusted/thanked stays present
+    "joy": 0.90,  # positive event-emotion dissipates quickest
 }
 
 
@@ -117,6 +118,7 @@ def policy_node(state: AnjoState) -> dict:
     has_threads = False
     try:
         from anjo.memory.memory_graph import get_open_threads
+
         threads = get_open_threads(state.user_id)
         has_threads = len(threads) > 0
     except Exception:
@@ -142,7 +144,7 @@ def retrieve_node(state: AnjoState) -> dict:
     so Anjo knows where things were left, independent of semantic relevance.
     Semantic retrieval fills the rest as (score, text) tuples for skeptical framing.
     """
-    from anjo.memory.long_term import query_memories, get_last_session_summary
+    from anjo.memory.long_term import get_last_session_summary, query_memories
 
     memories: list[tuple[float, str]] = []
 
@@ -215,9 +217,9 @@ def gate_node(state: AnjoState) -> dict:
     on the critical path instead of two. Falls back to rule-based on any error.
     """
     import json as _json
+
     from anjo.core.emotion import _is_abuse, classify_intent
-    from anjo.memory.retrieval_classifier import should_retrieve as _should_retrieve_rules
-    from anjo.core.llm import get_client, MODEL_BACKGROUND
+    from anjo.core.llm import MODEL_BACKGROUND, get_client
 
     msg = state.user_message
     lower = msg.lower().strip()
@@ -231,9 +233,7 @@ def gate_node(state: AnjoState) -> dict:
 
     history = state.conversation_history
     recent = history[-4:] if len(history) > 4 else history
-    context_lines = "\n".join(
-        f"{m['role'].upper()}: {m['content'][:120]}" for m in recent
-    )
+    context_lines = "\n".join(f"{m['role'].upper()}: {m['content'][:120]}" for m in recent)
 
     user_prompt = f"""\
 Relationship stage: {core.relationship.stage}
@@ -253,12 +253,13 @@ Current message: {msg}"""
             messages=[{"role": "user", "content": user_prompt}],
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         )
-        if not resp.content or not hasattr(resp.content[0], 'text'):
+        if not resp.content or not hasattr(resp.content[0], "text"):
             raise ValueError("empty gate response")
         raw = resp.content[0].text.strip().strip("```json").strip("```").strip()
         data = _json.loads(raw)
         intent = str(data.get("intent", "CASUAL")).upper()
         from anjo.core.emotion import _VALID_INTENTS
+
         if intent not in _VALID_INTENTS:
             intent = classify_intent(msg)
         retrieve = _coerce_llm_bool(data.get("retrieve"), False) or is_first
@@ -281,8 +282,9 @@ def silence_node(state: AnjoState) -> dict:
     Uses a fast Haiku call. Defaults to True on any error — silence is a choice,
     not a fallback for failures.
     """
-    from anjo.core.llm import get_client, MODEL_BACKGROUND
     import json
+
+    from anjo.core.llm import MODEL_BACKGROUND, get_client
 
     core = SelfCore.from_state(state.self_core, state.user_id or "default")
 
@@ -293,9 +295,7 @@ def silence_node(state: AnjoState) -> dict:
     user_msg = state.user_message
 
     recent = history[-6:] if len(history) > 6 else history
-    transcript_lines = "\n".join(
-        f"{m['role'].upper()}: {m['content']}" for m in recent
-    )
+    transcript_lines = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in recent)
 
     reproach = state.active_emotions.get("reproach", 0.0)
     autonomy = core.goals.autonomy
@@ -318,11 +318,13 @@ Would Anjo respond to this, or go quiet?"""
         response = get_client().messages.create(
             model=MODEL_BACKGROUND,
             max_tokens=60,
-            system=[{"type": "text", "text": _SILENCE_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+            system=[
+                {"type": "text", "text": _SILENCE_SYSTEM, "cache_control": {"type": "ephemeral"}}
+            ],
             messages=[{"role": "user", "content": user_prompt}],
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         )
-        if not response.content or not hasattr(response.content[0], 'text'):
+        if not response.content or not hasattr(response.content[0], "text"):
             logger.warning("silence_node: empty or malformed response — defaulting to respond")
             return {"should_respond": True}
         raw = response.content[0].text.strip().strip("```json").strip("```").strip()
@@ -358,7 +360,7 @@ def respond_node(state: AnjoState) -> dict:
         extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
     )
 
-    if not response.content or not hasattr(response.content[0], 'text'):
+    if not response.content or not hasattr(response.content[0], "text"):
         raise ValueError("respond_node: LLM returned empty or malformed content")
     assistant_text = response.content[0].text
     updated_history = list(state.conversation_history) + [

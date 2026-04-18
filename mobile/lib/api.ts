@@ -120,33 +120,6 @@ export interface LetterResponse {
   session_count?: number;
 }
 
-// ── Billing ───────────────────────────────────────────────────────────────────
-
-export interface BillingStatus {
-  tier: string;
-  subscribed: boolean;
-  daily_limit: number;
-  messages_used: number;
-  messages_remaining: number;
-  message_credits: number;
-  period_end: string;
-  payments_enabled: boolean;
-}
-
-export interface RCProduct {
-  product_id: string;
-  tier?: string;
-  interval?: string;
-  type?: string;
-  amount?: number;
-}
-
-export interface BillingConfig {
-  payments_enabled: boolean;
-  user_id?: string;
-  products?: Record<string, RCProduct>;
-}
-
 // ── API surface ───────────────────────────────────────────────────────────────
 
 export const api = {
@@ -180,11 +153,6 @@ export const api = {
     },
     bulkDeleteMemoryNodes: (startDate: string, endDate: string) =>
       post<{ ok: boolean; deleted_count: number }>(`/api/story/memory-graph/bulk-delete?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`, {}),
-  },
-
-  billing: {
-    status: () => get<BillingStatus>('/api/billing/status'),
-    config: () => get<BillingConfig>('/api/billing/config'),
   },
 
   account: {

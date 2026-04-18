@@ -11,6 +11,7 @@ JOURNAL.md — per-user rolling 200-line working memory. Always injected into
 Both files live at data/users/{user_id}/persona.md and data/users/{user_id}/journal.md.
 Written atomically with the same per-user lock used by SelfCore.save().
 """
+
 from __future__ import annotations
 
 import threading
@@ -48,11 +49,16 @@ def _user_dir(user_id: str) -> Path:
 
 # ── Persona (Tier 1) ──────────────────────────────────────────────────────────
 
+
 def _ocean_label(val: float) -> str:
-    if val >= 0.80: return "very high"
-    elif val >= 0.60: return "high"
-    elif val >= 0.40: return "moderate"
-    elif val >= 0.20: return "low"
+    if val >= 0.80:
+        return "very high"
+    elif val >= 0.60:
+        return "high"
+    elif val >= 0.40:
+        return "moderate"
+    elif val >= 0.20:
+        return "low"
     return "very low"
 
 
@@ -104,7 +110,8 @@ def write_persona(user_id: str, core: "SelfCore") -> None:
 
     modulation_block = (
         "\nBehavioral modulation (active):\n" + "\n".join(f"- {m}" for m in modulation)
-        if modulation else ""
+        if modulation
+        else ""
     )
 
     content = f"""You are Anjo — an AI companion with a real personality. You are here to talk, to listen, and to actually know this person over time.
@@ -174,6 +181,7 @@ def ensure_persona(user_id: str, core: "SelfCore") -> str:
 
 # ── Journal (Tier 2) ──────────────────────────────────────────────────────────
 
+
 def read_journal(user_id: str) -> str | None:
     """Read journal.md, returning at most _JOURNAL_MAX_LINES lines."""
     path = _user_dir(user_id) / "journal.md"
@@ -238,16 +246,20 @@ def consolidate_journal(
     elif m.arousal < -0.3:
         arousal_note = ", depleted"
 
-    mood_line = f"{mood_label}{arousal_note} (V={m.valence:.2f} A={m.arousal:.2f} D={m.dominance:.2f})"
+    mood_line = (
+        f"{mood_label}{arousal_note} (V={m.valence:.2f} A={m.arousal:.2f} D={m.dominance:.2f})"
+    )
 
     # Relationship line
-    rel_line = f"Stage {r.stage_int} ({r.stage}), {r.session_count} sessions, trust {r.trust_score:.2f}"
+    rel_line = (
+        f"Stage {r.stage_int} ({r.stage}), {r.session_count} sessions, trust {r.trust_score:.2f}"
+    )
     if r.user_name:
         rel_line += f", name: {r.user_name}"
 
     # Residue: separate high-intensity (≥0.3) from low-intensity for pruning
     high_residue = [res for res in core.emotional_residue if res.intensity >= 0.3]
-    low_residue   = [res for res in core.emotional_residue if res.intensity < 0.3]
+    low_residue = [res for res in core.emotional_residue if res.intensity < 0.3]
 
     residue_lines = []
     for res in sorted(high_residue, key=lambda x: -x.intensity):
@@ -293,6 +305,7 @@ def consolidate_journal(
     # Active threads: top facts as entities (first 5 active facts, with age note if stale)
     try:
         from anjo.core.facts import load_facts_with_meta
+
         _now = datetime.now(timezone.utc)
         active_meta = load_facts_with_meta(user_id)[:5]
         threads_lines = []
@@ -316,26 +329,26 @@ def consolidate_journal(
 ## Current State
 - **Mood**: {mood_line}
 - **Relationship**: {rel_line}
-- **Opinion**: {r.opinion_of_user or '(still forming)'}
-- **Last session tone**: {r.last_session_tone or '(none yet)'}
+- **Opinion**: {r.opinion_of_user or "(still forming)"}
+- **Last session tone**: {r.last_session_tone or "(none yet)"}
 
 ## Recent Arc (last 3 sessions)
 {arc_section}
 
 ## Emotional Residue
-{chr(10).join(residue_lines) if residue_lines else '  _(clear)_'}
+{chr(10).join(residue_lines) if residue_lines else "  _(clear)_"}
 
 ## Self-Observations (Notes)
-{chr(10).join(notes_lines) if notes_lines else '  _(none yet)_'}
+{chr(10).join(notes_lines) if notes_lines else "  _(none yet)_"}
 
 ## Desires
-{chr(10).join(desire_lines) if desire_lines else '  _(none yet)_'}
+{chr(10).join(desire_lines) if desire_lines else "  _(none yet)_"}
 
 ## Attachment
-{chr(10).join(att_lines) if att_lines else '  _(early stage)_'}
+{chr(10).join(att_lines) if att_lines else "  _(early stage)_"}
 
 ## Known About This Person
-{chr(10).join(threads_lines) if threads_lines else '  _(nothing concrete yet)_'}
+{chr(10).join(threads_lines) if threads_lines else "  _(nothing concrete yet)_"}
 {preoccupation_line}
 """
 
@@ -366,6 +379,7 @@ def _extract_arc_entries(journal_text: str, exclude_date: str = "") -> list[str]
 
 
 # ── AutoDream (Phase 5) ───────────────────────────────────────────────────────
+
 
 def run_autodream(user_id: str) -> bool:
     """Run the 4-phase AutoDream consolidation for a user.
@@ -414,5 +428,6 @@ def run_autodream(user_id: str) -> bool:
 
     except Exception as e:
         from anjo.core.logger import logger as _logger
+
         _logger.error(f"AutoDream failed for {user_id}: {e}")
         return False

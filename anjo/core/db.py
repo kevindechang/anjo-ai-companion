@@ -1,4 +1,5 @@
 """SQLite database — per-thread WAL-mode connections with connection pool."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -71,33 +72,6 @@ def _init_schema(conn: sqlite3.Connection) -> None:
             created_at         TEXT NOT NULL
         );
 
-        CREATE TABLE IF NOT EXISTS credits (
-            user_id             TEXT PRIMARY KEY,
-            balance_usd         REAL    NOT NULL DEFAULT 0.0,
-            total_spent_usd     REAL    NOT NULL DEFAULT 0.0,
-            total_topped_up_usd REAL    NOT NULL DEFAULT 0.0,
-            message_credits     INTEGER NOT NULL DEFAULT 0,
-            last_updated        TEXT    NOT NULL DEFAULT ''
-        );
-
-        CREATE TABLE IF NOT EXISTS subscriptions (
-            user_id                 TEXT PRIMARY KEY,
-            status                  TEXT NOT NULL DEFAULT 'none',
-            tier                    TEXT NOT NULL DEFAULT 'free',
-            paddle_customer_id      TEXT NOT NULL DEFAULT '',
-            paddle_subscription_id  TEXT NOT NULL DEFAULT '',
-            current_period_end      TEXT NOT NULL DEFAULT '',
-            rollover_messages       INTEGER NOT NULL DEFAULT 0,
-            updated_at              TEXT NOT NULL DEFAULT ''
-        );
-
-        CREATE TABLE IF NOT EXISTS daily_usage (
-            user_id TEXT NOT NULL,
-            date    TEXT NOT NULL,
-            count   INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (user_id, date)
-        );
-
         CREATE TABLE IF NOT EXISTS facts (
             user_id    TEXT PRIMARY KEY,
             facts_json TEXT NOT NULL DEFAULT '[]',
@@ -127,12 +101,6 @@ def _init_schema(conn: sqlite3.Connection) -> None:
             ts    TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_topic_trends_ts ON topic_trends(ts);
-
-        CREATE TABLE IF NOT EXISTS processed_transactions (
-            transaction_id TEXT PRIMARY KEY,
-            user_id        TEXT NOT NULL,
-            processed_at   TEXT NOT NULL
-        );
 
         CREATE TABLE IF NOT EXISTS active_sessions (
             user_id      TEXT PRIMARY KEY,
@@ -198,28 +166,6 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
 
     # Blind-index columns for encrypted lookups — HMAC-SHA256 of the plaintext value.
     # These allow equality WHERE queries without decrypting every row.
-    try:
-        conn.execute("ALTER TABLE subscriptions ADD COLUMN free_sessions_used INTEGER NOT NULL DEFAULT 0")
-        conn.commit()
-    except sqlite3.OperationalError as exc:
-        if not _already_exists(exc):
-            raise
-
-    try:
-        conn.execute("ALTER TABLE subscriptions ADD COLUMN rollover_messages INTEGER NOT NULL DEFAULT 0")
-        conn.commit()
-    except sqlite3.OperationalError as exc:
-        if not _already_exists(exc):
-            raise
-
-    for col in ("fs_account_id", "fs_subscription_id"):
-        try:
-            conn.execute(f"ALTER TABLE subscriptions ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
-            conn.commit()
-        except sqlite3.OperationalError as exc:
-            if not _already_exists(exc):
-                raise
-
     for col in ("email_hmac", "reset_token_hmac", "verification_token_hmac"):
         try:
             conn.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")

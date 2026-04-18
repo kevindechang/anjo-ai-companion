@@ -10,6 +10,7 @@ proportional trust is the actual risk signature).
 When flagged: cap attachment increment to +0.03/session. The arc continues,
 just slower. Killing it entirely produces flat relationship plateaus.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,16 +20,17 @@ if TYPE_CHECKING:
     from anjo.core.self_core import SelfCore
 
 
-_VELOCITY_THRESHOLD = 0.25   # max weight delta in 5-session window
-_ABSOLUTE_THRESHOLD = 0.70   # absolute weight ceiling before flagging
-_TRUST_CO_THRESHOLD = 0.50   # only flag if trust is below this
-_FLAGGED_MAX_DELTA  = 0.03   # capped increment when flagged
-_WINDOW_SIZE        = 5      # sessions in the rolling window
+_VELOCITY_THRESHOLD = 0.25  # max weight delta in 5-session window
+_ABSOLUTE_THRESHOLD = 0.70  # absolute weight ceiling before flagging
+_TRUST_CO_THRESHOLD = 0.50  # only flag if trust is below this
+_FLAGGED_MAX_DELTA = 0.03  # capped increment when flagged
+_WINDOW_SIZE = 5  # sessions in the rolling window
 
 
 @dataclass
 class SafetyResult:
     """Result of a safety check."""
+
     flagged: bool = False
     reasons: list[str] = field(default_factory=list)
     capped_delta: float | None = None  # if set, max attachment delta for this session
@@ -60,8 +62,7 @@ def check_attachment_safety(core: "SelfCore") -> SafetyResult:
     if weight > _ABSOLUTE_THRESHOLD and trust < _TRUST_CO_THRESHOLD:
         result.flagged = True
         result.reasons.append(
-            f"Attachment weight {weight:.3f} > {_ABSOLUTE_THRESHOLD} "
-            f"(trust={trust:.2f})"
+            f"Attachment weight {weight:.3f} > {_ABSOLUTE_THRESHOLD} (trust={trust:.2f})"
         )
 
     if result.flagged:
@@ -99,7 +100,6 @@ def check_stage_velocity(core: "SelfCore") -> SafetyResult:
     if expected and r.session_count < expected:
         result.flagged = True
         result.reasons.append(
-            f"Stage '{r.stage}' reached at session {r.session_count} "
-            f"(expected minimum: {expected})"
+            f"Stage '{r.stage}' reached at session {r.session_count} (expected minimum: {expected})"
         )
     return result

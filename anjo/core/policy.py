@@ -15,6 +15,7 @@ Stance palette:
   HOLD_SPACE  — present but not pushing; silence-adjacent
   ENGAGE      — active curiosity; lean in; ask questions
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -137,6 +138,7 @@ def decide_stance(
     if has_open_threads and stage_int >= 3 and intent in ("CASUAL", "CURIOSITY"):
         # Only follow up on ~30% of casual turns to avoid feeling like a checklist
         import hashlib
+
         # Deterministic but varied: hash the preoccupation to decide
         if core.preoccupation:
             h = int(hashlib.md5(core.preoccupation.encode()).hexdigest()[:4], 16)
@@ -144,19 +146,26 @@ def decide_stance(
                 return Stance.FOLLOW_UP, _DIRECTIVES[Stance.FOLLOW_UP]
 
     # FLIRT gate: high trust + close/intimate + warm mood
-    if (stage_int >= 4 and core.relationship.trust_score > 0.7
-            and m.valence > 0.2 and intent in ("CASUAL", "CURIOSITY")):
+    if (
+        stage_int >= 4
+        and core.relationship.trust_score > 0.7
+        and m.valence > 0.2
+        and intent in ("CASUAL", "CURIOSITY")
+    ):
         # Flirt on ~25% of eligible turns
         import hashlib
+
         h = int(hashlib.md5(f"{core.relationship.session_count}".encode()).hexdigest()[:4], 16)
         if h % 4 == 0:
             return Stance.FLIRT, _DIRECTIVES[Stance.FLIRT]
 
     # TEASE gate: friend+ with warm mood and casual intent
-    if (stage_int >= 3 and m.valence > 0.1
-            and intent == "CASUAL" and att.comfort > 0.3):
+    if stage_int >= 3 and m.valence > 0.1 and intent == "CASUAL" and att.comfort > 0.3:
         import hashlib
-        h = int(hashlib.md5(f"tease_{core.relationship.session_count}".encode()).hexdigest()[:4], 16)
+
+        h = int(
+            hashlib.md5(f"tease_{core.relationship.session_count}".encode()).hexdigest()[:4], 16
+        )
         if h % 5 == 0:
             return Stance.TEASE, _DIRECTIVES[Stance.TEASE]
 

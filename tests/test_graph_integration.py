@@ -6,12 +6,10 @@ Tests cover:
   - occ_carry preservation across turns
   - AnjoState Pydantic model validation
 """
+
 from __future__ import annotations
 
 import threading
-
-import pytest
-
 
 # ── AnjoState Pydantic model ──────────────────────────────────────────────────
 
@@ -21,6 +19,7 @@ class TestAnjoState:
 
     def test_defaults(self):
         from anjo.graph.state import AnjoState
+
         state = AnjoState()
         assert state.user_message == ""
         assert state.conversation_history == []
@@ -31,6 +30,7 @@ class TestAnjoState:
 
     def test_from_dict(self):
         from anjo.graph.state import AnjoState
+
         state = AnjoState(**{"user_message": "hello", "user_id": "u1"})
         assert state.user_message == "hello"
         assert state.user_id == "u1"
@@ -38,6 +38,7 @@ class TestAnjoState:
 
     def test_extra_fields_allowed(self):
         from anjo.graph.state import AnjoState
+
         state = AnjoState(**{"user_message": "hi", "custom_field": 42})
         assert state.custom_field == 42
 
@@ -50,10 +51,12 @@ class TestPreResponseGraph:
 
     def test_graph_compiles(self):
         from anjo.graph.conversation_graph import pre_response_graph
+
         assert pre_response_graph is not None
 
     def test_full_graph_compiles(self):
         from anjo.graph.conversation_graph import conversation_graph
+
         assert conversation_graph is not None
 
     def test_silence_path(self, monkeypatch):
@@ -67,13 +70,16 @@ class TestPreResponseGraph:
 
         # Must rebuild AFTER patching so the graph captures the mock
         from anjo.graph.conversation_graph import build_pre_response_graph
+
         graph = build_pre_response_graph()
-        result = graph.invoke({
-            "user_message": "bye",
-            "conversation_history": [{"role": "user", "content": "bye"}],
-            "self_core": {},
-            "user_id": "test",
-        })
+        result = graph.invoke(
+            {
+                "user_message": "bye",
+                "conversation_history": [{"role": "user", "content": "bye"}],
+                "self_core": {},
+                "user_id": "test",
+            }
+        )
         assert result["should_respond"] is False
         # appraise_node should NOT have run (active_emotions unchanged from input)
         assert not result.get("active_emotions")
@@ -89,8 +95,12 @@ class TestPreResponseGraph:
             return {"intent": "CASUAL", "should_retrieve": False, "should_respond": True}
 
         def mock_appraise(state):
-            return {"active_emotions": {"joy": 0.5}, "intent": "CASUAL",
-                    "self_core": default_core, "occ_carry": {}}
+            return {
+                "active_emotions": {"joy": 0.5},
+                "intent": "CASUAL",
+                "self_core": default_core,
+                "occ_carry": {},
+            }
 
         def mock_policy(state):
             return {"stance": "warm", "stance_directive": ""}
@@ -107,13 +117,16 @@ class TestPreResponseGraph:
         monkeypatch.setattr(nodes, "retrieve_node", tracking_retrieve)
 
         from anjo.graph.conversation_graph import build_pre_response_graph
+
         graph = build_pre_response_graph()
-        result = graph.invoke({
-            "user_message": "hello",
-            "conversation_history": [],
-            "self_core": default_core,
-            "user_id": "test",
-        })
+        result = graph.invoke(
+            {
+                "user_message": "hello",
+                "conversation_history": [],
+                "self_core": default_core,
+                "user_id": "test",
+            }
+        )
         assert result["should_respond"] is True
         assert result["active_emotions"] == {"joy": 0.5}
         assert len(retrieve_called) == 0  # retrieve was skipped
@@ -132,8 +145,12 @@ class TestPreResponseGraph:
             return {"retrieved_memories": [(0.9, "test memory")]}
 
         def mock_appraise(state):
-            return {"active_emotions": {}, "intent": "CURIOSITY",
-                    "self_core": default_core, "occ_carry": {}}
+            return {
+                "active_emotions": {},
+                "intent": "CURIOSITY",
+                "self_core": default_core,
+                "occ_carry": {},
+            }
 
         def mock_policy(state):
             return {"stance": "engaged", "stance_directive": ""}
@@ -144,13 +161,16 @@ class TestPreResponseGraph:
         monkeypatch.setattr(nodes, "policy_node", mock_policy)
 
         from anjo.graph.conversation_graph import build_pre_response_graph
+
         graph = build_pre_response_graph()
-        result = graph.invoke({
-            "user_message": "what did I say last time?",
-            "conversation_history": [],
-            "self_core": default_core,
-            "user_id": "test",
-        })
+        result = graph.invoke(
+            {
+                "user_message": "what did I say last time?",
+                "conversation_history": [],
+                "self_core": default_core,
+                "user_id": "test",
+            }
+        )
         assert result["should_retrieve"] is True
         assert len(result["retrieved_memories"]) == 1
 
@@ -163,9 +183,9 @@ class TestOccCarry:
 
     def test_carry_flows_through(self, monkeypatch):
         """appraise_node receives occ_carry from previous turn and decays it."""
-        from anjo.graph.nodes import appraise_node, _OCC_CARRY_DECAY
-        from anjo.graph.state import AnjoState
         from anjo.core.self_core import SelfCore
+        from anjo.graph.nodes import _OCC_CARRY_DECAY, appraise_node
+        from anjo.graph.state import AnjoState
 
         default_core = SelfCore.load("default")
         core_dict = default_core.model_dump()
@@ -198,6 +218,7 @@ class TestBackgroundTaskDedup:
 
     def test_reflection_claim_idempotent(self):
         from anjo.dashboard.background_tasks import reflection_session_claim
+
         sid = "dedup-test-session"
         assert reflection_session_claim(sid) is True
         assert reflection_session_claim(sid) is False
@@ -232,8 +253,9 @@ class TestBackgroundTaskDedup:
 
     def test_bounded_set_eviction(self):
         """Bounded set evicts oldest entries when full."""
-        from anjo.dashboard.background_tasks import _set_add
         import collections
+
+        from anjo.dashboard.background_tasks import _set_add
 
         od: collections.OrderedDict = collections.OrderedDict()
         for i in range(5):
@@ -247,7 +269,10 @@ class TestBackgroundTaskDedup:
     def test_cleanup_removes_tracking(self):
         """cleanup_session_tracking removes entries from _QUICK_FACTS_DONE."""
         from anjo.dashboard.background_tasks import (
-            _QUICK_FACTS_DONE, _SETS_LOCK, _set_add, cleanup_session_tracking,
+            _QUICK_FACTS_DONE,
+            _SETS_LOCK,
+            _set_add,
+            cleanup_session_tracking,
         )
 
         key = ("cleanup-user", "cleanup-sess")

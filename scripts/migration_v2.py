@@ -14,6 +14,7 @@ Usage:
     python scripts/migration_v2.py
     python scripts/migration_v2.py --dry-run
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,7 +26,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from anjo.core.crypto import read_encrypted, write_encrypted
-
 
 _DATA_ROOT = Path(__file__).parent.parent / "data"
 
@@ -107,7 +107,8 @@ def migrate(dry_run: bool = False) -> None:
             "notes": data.get("notes", []),
             "emotional_residue": data.get("emotional_residue", []),
             "attachment": {
-                k: v for k, v in data.get("attachment", {}).items()
+                k: v
+                for k, v in data.get("attachment", {}).items()
                 if k != "weight_history"  # new field, not in legacy
             },
             "relational_desires": data.get("relational_desires", []),
@@ -136,6 +137,8 @@ def migrate(dry_run: bool = False) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Migrate SelfCore to v2 split architecture")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would be done without writing")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be done without writing"
+    )
     args = parser.parse_args()
     migrate(dry_run=args.dry_run)

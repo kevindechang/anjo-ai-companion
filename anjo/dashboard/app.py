@@ -1,4 +1,5 @@
 """Anjo Dashboard — FastAPI application."""
+
 from __future__ import annotations
 
 import asyncio
@@ -12,13 +13,13 @@ from dotenv import load_dotenv
 # at first use, which happens at import time via module-level constants.
 load_dotenv()
 
-from anjo.core.logger import logger
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from anjo.core.logger import logger
 from anjo.dashboard.auth import (
     COOKIE_NAME,
     _token_from_request,
@@ -27,17 +28,15 @@ from anjo.dashboard.auth import (
     verify_token,
 )
 from anjo.dashboard.middleware.rate_limit import RateLimitMiddleware
-from anjo.dashboard.watchers import _inactivity_watcher, _drift_watcher
-
-from anjo.dashboard.routes.self_core_routes import router as self_core_router
-from anjo.dashboard.routes.memory_routes import router as memory_router
-from anjo.dashboard.routes.chat_routes import router as chat_router
-from anjo.dashboard.routes.reset_routes import router as reset_router
-from anjo.dashboard.routes.auth_routes import router as auth_router
-from anjo.dashboard.routes.story_routes import router as story_router
-from anjo.dashboard.routes.billing_routes import router as billing_router
-from anjo.dashboard.routes.forget_routes import router as forget_router
 from anjo.dashboard.routes.admin_routes import router as admin_router
+from anjo.dashboard.routes.auth_routes import router as auth_router
+from anjo.dashboard.routes.chat_routes import router as chat_router
+from anjo.dashboard.routes.forget_routes import router as forget_router
+from anjo.dashboard.routes.memory_routes import router as memory_router
+from anjo.dashboard.routes.reset_routes import router as reset_router
+from anjo.dashboard.routes.self_core_routes import router as self_core_router
+from anjo.dashboard.routes.story_routes import router as story_router
+from anjo.dashboard.watchers import _drift_watcher, _inactivity_watcher
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -63,11 +62,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Verify encryption key is properly configured before serving
+    from anjo.core.crypto import verify_production_key
     from anjo.core.transcript_queue import process_all_pending
     from anjo.dashboard.session_store import recover_sessions_on_startup
 
-    # Verify encryption key is properly configured before serving
-    from anjo.core.crypto import verify_production_key
     verify_production_key()
 
     # Recover sessions from SQLite — sessions now survive server restarts
@@ -77,6 +76,7 @@ async def lifespan(_: FastAPI):
 
     # Load revoked tokens from DB so logout survives restarts
     from anjo.dashboard.auth import load_revoked_tokens_from_db
+
     load_revoked_tokens_from_db()
 
     count = process_all_pending()
@@ -84,7 +84,7 @@ async def lifespan(_: FastAPI):
         logger.info(f"Caught up on {count} pending transcript(s)")
 
     inactivity_task = asyncio.create_task(_inactivity_watcher())
-    drift_task      = asyncio.create_task(_drift_watcher())
+    drift_task = asyncio.create_task(_drift_watcher())
     yield
     inactivity_task.cancel()
     drift_task.cancel()
@@ -122,8 +122,8 @@ cors_origins = (
     else [
         os.environ.get("ANJO_BASE_URL", "https://your-domain.com"),
         "http://localhost:8081",  # Expo dev
-        "http://localhost:19000", # Expo dev
-        "http://localhost:19001", # Expo dev
+        "http://localhost:19000",  # Expo dev
+        "http://localhost:19001",  # Expo dev
         "http://localhost:8000",  # Web dev
     ]
 )
@@ -140,6 +140,7 @@ app.add_middleware(
 app.add_middleware(SecurityHeadersMiddleware)
 
 from anjo.dashboard.routes.mobile_auth_routes import router as mobile_auth_router
+
 app.include_router(admin_router)
 app.include_router(mobile_auth_router, prefix="/api/auth")
 app.include_router(auth_router)
@@ -148,7 +149,6 @@ app.include_router(memory_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(reset_router, prefix="/api")
 app.include_router(story_router, prefix="/api")
-app.include_router(billing_router, prefix="/api")
 app.include_router(forget_router, prefix="/api")
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -194,16 +194,6 @@ async def terms():
     return FileResponse(STATIC_DIR / "terms.html")
 
 
-@app.get("/refund")
-async def refund():
-    return FileResponse(STATIC_DIR / "refund.html")
-
-
-@app.get("/billing")
-async def billing():
-    return FileResponse(STATIC_DIR / "billing.html")
-
-
 @app.get("/dev")
 async def dev(request: Request):
     return RedirectResponse("/chat", status_code=302)
@@ -223,6 +213,7 @@ async def debug(request: Request):
 
 def run() -> None:
     import uvicorn
+
     dev = os.environ.get("ANJO_ENV", "dev") == "dev"
     uvicorn.run(
         "anjo.dashboard.app:app",

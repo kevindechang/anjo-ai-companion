@@ -8,6 +8,7 @@ Billing is a pre/post wrapper around the graph + streaming.
 Background tasks (quick-facts extraction, mid-session reflection) and
 deduplication tracking live in ``anjo.dashboard.background_tasks``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -18,13 +19,19 @@ import threading
 
 # Extended thinking — off by default; incompatible with prompt caching
 _THINKING_ENABLED = os.environ.get("ANJO_THINKING_ENABLED", "false").lower() == "true"
-_THINKING_BUDGET  = int(os.environ.get("ANJO_THINKING_BUDGET", "3000"))
+_THINKING_BUDGET = int(os.environ.get("ANJO_THINKING_BUDGET", "3000"))
 
 from fastapi import APIRouter, Body, Depends
 from fastapi.responses import StreamingResponse
 
-from anjo.dashboard.auth import get_current_user_id
 from anjo.core.logger import logger
+from anjo.dashboard.auth import get_current_user_id
+from anjo.dashboard.background_tasks import (
+    cleanup_session_tracking,
+    maybe_mid_reflect,
+    quick_facts_extract,
+    reflection_session_claim,
+)
 from anjo.dashboard.session_store import (
     accumulate_tokens,
     delete_session,
@@ -35,12 +42,6 @@ from anjo.dashboard.session_store import (
     touch_session,
     update_session_state,
 )
-from anjo.dashboard.background_tasks import (
-    cleanup_session_tracking,
-    quick_facts_extract,
-    maybe_mid_reflect,
-    reflection_session_claim,
-)
 
 router = APIRouter()
 
@@ -49,12 +50,14 @@ router = APIRouter()
 def get_history(user_id: str = Depends(get_current_user_id)):
     """Return full persistent chat history from SQLite."""
     from anjo.core.history import get_history as _get
+
     return {"history": _get(user_id)}
 
 
 @router.post("/chat/start")
 def start_session(tz_offset: int = 0, user_id: str = Depends(get_current_user_id)):
     from anjo.dashboard.session_store import _sessions_lock
+
     session_id = get_or_create_session(user_id)
     pending_outreach = None
     with _sessions_lock:
@@ -66,12 +69,16 @@ def start_session(tz_offset: int = 0, user_id: str = Depends(get_current_user_id
 
 
 @router.post("/chat/{session_id}/message")
-async def chat_message(session_id: str, text: str = Body(..., embed=True), user_id: str = Depends(get_current_user_id)):
-    from fastapi.responses import JSONResponse
+async def chat_message(
+    session_id: str, text: str = Body(..., embed=True), user_id: str = Depends(get_current_user_id)
+):
     import unicodedata
+
+    from fastapi.responses import JSONResponse
+
     # Strip Unicode zero-width / invisible characters before any other check
-    _ZERO_WIDTH = {'\u200b', '\u200c', '\u200d', '\ufeff', '\u2060', '\u180e'}
-    text = ''.join(c for c in unicodedata.normalize('NFC', text) if c not in _ZERO_WIDTH)
+    _ZERO_WIDTH = {"\u200b", "\u200c", "\u200d", "\ufeff", "\u2060", "\u180e"}
+    text = "".join(c for c in unicodedata.normalize("NFC", text) if c not in _ZERO_WIDTH)
     if not text.strip():
         return JSONResponse({"error": "Message cannot be empty"}, status_code=400)
     if len(text) > 4000:
@@ -96,19 +103,14 @@ async def chat_message(session_id: str, text: str = Body(..., embed=True), user_
     async def event_stream():
         nonlocal state
 
-        # Credit gate first — before any LLM work or history writes
-        from anjo.core.subscription import can_send_message, get_tier, deduct_message_count
-        if not can_send_message(user_id):
-            tier = get_tier(user_id)
-            yield f"event: no_credits\ndata: {json.dumps({'tier': tier})}\n\n"
-            return
-
         # Persist user message to SQLite before the graph runs
         from anjo.core.history import append_message as _append
+
         _append(user_id, "user", text.strip())
 
         # Run orchestration graph: perceive → gate → [retrieve →] appraise → policy
         from anjo.graph.conversation_graph import pre_response_graph
+
         try:
             state = await pre_response_graph.ainvoke(state)
         except Exception as e:
@@ -123,8 +125,8 @@ async def chat_message(session_id: str, text: str = Body(..., embed=True), user_
             yield f"event: done\ndata: {json.dumps({'full_text': '', 'retrieved_memories': [], 'did_retrieve': False, 'active_emotions': state.get('active_emotions', {}), 'intent': state.get('intent', ''), 'silent': True})}\n\n"
             return
 
-        from anjo.core.self_core import SelfCore
         from anjo.core.prompt_builder import build_system_prompt
+        from anjo.core.self_core import SelfCore
 
         core = SelfCore.from_state(state["self_core"], user_id)
         user_turn_count = sum(1 for m in state["conversation_history"] if m["role"] == "user")
@@ -140,12 +142,11 @@ async def chat_message(session_id: str, text: str = Body(..., embed=True), user_
             stance_directive=state.get("stance_directive", ""),
         )
 
-        from anjo.core.llm import get_client, MODEL, MODEL_BACKGROUND
-        from anjo.core.subscription import get_model_for_user
+        from anjo.core.llm import MODEL, get_client
+
         loop = asyncio.get_event_loop()
 
-        _model_key = get_model_for_user(user_id)
-        _model_id  = MODEL if _model_key == "sonnet" else MODEL_BACKGROUND
+        _model_id = MODEL
 
         full_text = ""
         token_queue: asyncio.Queue = asyncio.Queue()
@@ -171,7 +172,11 @@ async def chat_message(session_id: str, text: str = Body(..., embed=True), user_
                         model=_model_id,
                         max_tokens=4096,
                         system=[
-                            {"type": "text", "text": static_block, "cache_control": {"type": "ephemeral"}},
+                            {
+                                "type": "text",
+                                "text": static_block,
+                                "cache_control": {"type": "ephemeral"},
+                            },
                             {"type": "text", "text": dynamic_block},
                         ],
                         messages=llm_history,
@@ -188,7 +193,9 @@ async def chat_message(session_id: str, text: str = Body(..., embed=True), user_
                     )
             except Exception as e:
                 logger.error(f"LLM stream error for {user_id}: {e}")
-                loop.call_soon_threadsafe(token_queue.put_nowait, ("error", "Service temporarily unavailable"))
+                loop.call_soon_threadsafe(
+                    token_queue.put_nowait, ("error", "Service temporarily unavailable")
+                )
 
         t = threading.Thread(target=_producer, daemon=True)
         t.start()
@@ -221,7 +228,6 @@ async def chat_message(session_id: str, text: str = Body(..., embed=True), user_
                     in_tok = data.get("input", 0)
                     out_tok = data.get("output", 0)
                     accumulate_tokens(user_id, in_tok, out_tok)
-                    deduct_message_count(user_id)
 
                 user_msg_count = sum(1 for m in updated_history if m["role"] == "user")
                 if user_msg_count == 4:
@@ -230,11 +236,20 @@ async def chat_message(session_id: str, text: str = Body(..., embed=True), user_
                     maybe_mid_reflect(user_id, updated_history)
 
                 from anjo.core.self_core import SelfCore as _SC
+
                 _c = _SC.model_validate(state["self_core"])
-                _mood = {"valence": _c.mood.valence, "arousal": _c.mood.arousal, "dominance": _c.mood.dominance}
-                _att  = {"longing": _c.attachment.longing, "weight": _c.attachment.weight}
-                _raw_mems = state.get('retrieved_memories', [])
-                _mem_strings = [doc for _, doc in _raw_mems] if _raw_mems and isinstance(_raw_mems[0], tuple) else _raw_mems
+                _mood = {
+                    "valence": _c.mood.valence,
+                    "arousal": _c.mood.arousal,
+                    "dominance": _c.mood.dominance,
+                }
+                _att = {"longing": _c.attachment.longing, "weight": _c.attachment.weight}
+                _raw_mems = state.get("retrieved_memories", [])
+                _mem_strings = (
+                    [doc for _, doc in _raw_mems]
+                    if _raw_mems and isinstance(_raw_mems[0], tuple)
+                    else _raw_mems
+                )
                 yield f"event: done\ndata: {json.dumps({'full_text': full_text, 'retrieved_memories': _mem_strings, 'did_retrieve': state.get('should_retrieve', False), 'active_emotions': state.get('active_emotions', {}), 'intent': state.get('intent', ''), 'mood': _mood, 'attachment': _att})}\n\n"
                 break
             elif kind == "error":
@@ -264,6 +279,7 @@ def end_session(session_id: str, user_id: str = Depends(get_current_user_id)):
     last_activity = session.get("last_activity")
 
     from anjo.core.self_core import SelfCore
+
     core = SelfCore.from_state(session["state"]["self_core"], user_id)
 
     do_reflect = reflection_session_claim(sid) if transcript else False
@@ -273,11 +289,18 @@ def end_session(session_id: str, user_id: str = Depends(get_current_user_id)):
     delete_session(user_id)
 
     if do_reflect and transcript:
-        from anjo.core.transcript_queue import save_pending, delete_pending
+        from anjo.core.transcript_queue import delete_pending, save_pending
         from anjo.reflection.engine import run_reflection
+
         pending_path = save_pending(transcript, user_id, sid)
         try:
-            run_reflection(transcript=transcript, core=core, user_id=user_id, session_id=sid, last_activity=last_activity)
+            run_reflection(
+                transcript=transcript,
+                core=core,
+                user_id=user_id,
+                session_id=sid,
+                last_activity=last_activity,
+            )
             delete_pending(pending_path)
         except Exception as e:
             logger.error(f"Reflection error for {user_id}: {e}")
