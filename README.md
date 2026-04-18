@@ -1,5 +1,9 @@
 # Anjo — AI Companion
 
+[![CI](https://github.com/kevinconquerer/anjo-ai-companion/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinconquerer/anjo-ai-companion/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
 > Most AI chatbots reset after every conversation. Anjo doesn't.
 
 Anjo remembers what matters, shifts its personality based on your interactions, and reflects after every session to grow. The longer you talk, the more it knows you. This is the full system, open-sourced under MIT.
@@ -95,6 +99,19 @@ All three files live in `data/users/{user_id}/` and are generated at runtime —
 ---
 
 ## Getting Started
+
+### Option A — Docker (fastest)
+
+```bash
+git clone https://github.com/kevinconquerer/anjo-ai-companion
+cd anjo-ai-companion
+cp .env.example .env   # then edit .env and set ANTHROPIC_API_KEY
+docker compose up
+```
+
+Visit `http://localhost:8000`.
+
+### Option B — Local Python
 
 **Requirements:** Python 3.11+, Node 18+ (for mobile)
 

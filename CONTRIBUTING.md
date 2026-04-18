@@ -1,19 +1,6 @@
-# Contributing to Anjo Scaffold
+# Contributing to Anjo
 
-Thanks for your interest in contributing. This is a scaffold — its job is to be a clean, well-documented starting point for AI companion apps. Contributions that improve that goal are welcome.
-
----
-
-## What This Repo Is (and Isn't)
-
-The scaffold provides infrastructure: auth, session management, ChromaDB memory, a LangGraph conversation graph, billing hooks, and a React Native mobile client.
-
-Two files are **intentional stubs** — they are NOT implemented here by design:
-
-- `anjo/core/prompt_builder.py` — define your companion's voice and persona
-- `anjo/reflection/engine.py` — define how your companion learns from conversations
-
-Contributions to the infrastructure are welcome. Contributions that fill in these stubs with a specific personality are out of scope — that's your app, not the scaffold.
+Thanks for your interest in contributing. Anjo is an open-source AI companion — contributions that improve the memory system, conversation graph, personality model, infrastructure, or developer experience are welcome.
 
 ---
 
@@ -57,20 +44,33 @@ Use the issue templates — they prompt for the information that makes issues ac
 
 ---
 
+## Branch Naming
+
+```
+feat/short-description       # new feature
+fix/short-description        # bug fix
+docs/short-description       # documentation only
+refactor/short-description   # refactoring, no behaviour change
+test/short-description       # adding or fixing tests
+```
+
+All branches cut from `main`. One logical change per branch.
+
 ## Submitting Pull Requests
 
-1. Fork the repo and create a branch from `main`
+1. Fork the repo and cut a branch using the naming convention above
 2. Make your changes
 3. Run the test suite: `pytest`
-4. Open a PR with a clear description of what and why
+4. Run linting: `ruff check .`
+5. Open a PR — use the PR template, it's short
 
 PRs should be focused. One logical change per PR.
 
 ### What makes a good PR
 
-- Fixes a real bug or improves developer experience
-- Keeps the scaffold generic — no app-specific logic
+- Fixes a real bug or improves the system
 - Includes or updates tests where appropriate
+- Passes CI (tests + lint run automatically on every PR)
 - Doesn't break existing tests
 
 ---
