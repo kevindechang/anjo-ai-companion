@@ -161,18 +161,28 @@ def _ocean_label(val: float) -> str:
     return "very low"
 
 
+def _persona_modulation_key(O: float, C: float, E: float, A: float, N: float) -> tuple:
+    """Return a tuple of active modulation flags matching write_persona's threshold rules."""
+    return (E > 0.7, N > 0.6, N < 0.25, A < 0.3, O < 0.5, C < 0.4)
+
+
 def _maybe_regenerate_persona(user_id: str, core: SelfCore, before: dict) -> None:
     p = core.personality
-    for trait in ("O", "C", "E", "A", "N"):
-        if _ocean_label(before[trait]) != _ocean_label(getattr(p, trait)):
-            try:
-                from anjo.memory.journal import write_persona
+    label_changed = any(
+        _ocean_label(before[t]) != _ocean_label(getattr(p, t)) for t in ("O", "C", "E", "A", "N")
+    )
+    modulation_changed = _persona_modulation_key(**before) != _persona_modulation_key(
+        O=p.O, C=p.C, E=p.E, A=p.A, N=p.N
+    )
+    if label_changed or modulation_changed:
+        reason = "label changed" if label_changed else "modulation threshold crossed"
+        try:
+            from anjo.memory.journal import write_persona
 
-                write_persona(user_id, core)
-                logger.info(f"persona.md regenerated for {user_id} (trait {trait} label changed)")
-            except Exception as e:
-                logger.error(f"persona.md regeneration failed for {user_id}: {e}")
-            return
+            write_persona(user_id, core)
+            logger.info(f"persona.md regenerated for {user_id} ({reason})")
+        except Exception as e:
+            logger.error(f"persona.md regeneration failed for {user_id}: {e}")
 
 
 _CEILING_SYSTEM = """You are Anjo. Someone you care about has asked you to keep your relationship
