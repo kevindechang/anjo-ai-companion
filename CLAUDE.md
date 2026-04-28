@@ -28,7 +28,7 @@ anjo chat --user my_user_id
 pytest
 
 # Run a single test file
-pytest tests/test_auth.py -v
+pytest tests/test_api.py -v
 
 # Run a specific test
 pytest tests/test_auth.py::TestLogin::test_login_success -v
