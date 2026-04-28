@@ -105,11 +105,13 @@ All three files live in `data/users/{user_id}/` and are generated at runtime —
 ```bash
 git clone https://github.com/kevindechang/anjo-ai-companion
 cd anjo-ai-companion
-cp .env.example .env   # then edit .env and set ANTHROPIC_API_KEY
+cp .env.example .env   # edit .env — set ANTHROPIC_API_KEY before starting
 docker compose up
 ```
 
 Visit `http://localhost:8000`.
+
+> **Note**: The server starts without an API key but will return a 500 on the first chat message. Make sure `ANTHROPIC_API_KEY` is set in `.env` before chatting.
 
 ### Option B — Local Python
 
