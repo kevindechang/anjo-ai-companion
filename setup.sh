@@ -49,6 +49,7 @@ echo "Installing dependencies (pip install -e \".[test]\")..."
 pip install --quiet --upgrade pip
 pip install --quiet -e ".[test]"
 echo "Dependencies installed ... ok"
+echo "Note: on first run, sentence-transformers will download a ~90MB embedding model."
 
 # ── Environment files ──────────────────────────────────────────────────────────
 
