@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Anjo" />
   <link rel="apple-touch-icon" href="/static/icon-192.png" />
-  <!-- FastSpring loaded dynamically after billing config fetch -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -501,8 +501,6 @@
         <a href="/story" class="dropdown-item">Our story</a>
         <a href="mailto:support@your-domain.com?subject=Feedback" class="dropdown-item">Send feedback</a>
         <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
-        <div id="billing-status" style="padding:6px 12px;font-size:12px;color:var(--text-muted);">—</div>
-        <a href="/billing" class="dropdown-item">Plans &amp; billing</a>
         <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
         <button class="dropdown-item" onclick="openAccountModal()">My account</button>
         <button class="dropdown-item danger" onclick="openModal('forget')">Forget me</button>
@@ -1041,10 +1039,6 @@
                 }
                 setStatus('online');
                 finish();
-              } else if (currentEvent === 'no_credits') {
-                anjoBubble.remove();
-                showNoCredits(d.tier || 'free');
-                finish();
               } else if (currentEvent === 'error') {
                 const bubble = anjoBubble.querySelector('.bubble');
                 bubble.querySelector('.typing')?.remove();
@@ -1106,21 +1100,6 @@
       } catch (_) { }
     }
 
-    // ── Billing ───────────────────────────────────────────────────────────────
-
-    async function fetchBillingStatus() {
-      try {
-        const r = await fetch('/api/billing/status');
-        if (!r.ok) return;
-        const d = await r.json();
-        const statusEl = document.getElementById('billing-status');
-        if (!statusEl) return;
-        const tierLabel = { free: 'Free', pro: 'Pro', premium: 'Premium' }[d.tier] || d.tier;
-        const extra = d.message_credits > 0 ? ` · ${d.message_credits} credits` : '';
-        statusEl.textContent = `${tierLabel} — ${d.messages_remaining} left today${extra}`;
-      } catch (_) { }
-    }
-
     function showToast(msg, type = 'info') {
       const t = document.createElement('div');
       t.textContent = msg;
@@ -1132,21 +1111,6 @@
       document.body.appendChild(t);
       requestAnimationFrame(() => { t.style.opacity = '1'; });
       setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 200); }, 4000);
-    }
-
-    function subscribe(tier) {
-      document.getElementById('dropdown').classList.remove('open');
-      showToast('Subscriptions are available on the Anjo mobile app.');
-    }
-
-    function buyCredits(pack) {
-      document.getElementById('dropdown').classList.remove('open');
-      showToast('Credit packs are available on the Anjo mobile app.');
-    }
-
-    function manageSubscription() {
-      document.getElementById('dropdown').classList.remove('open');
-      showToast('Manage your subscription in the Anjo mobile app.');
     }
 
     // ── Account modal ─────────────────────────────────────────────────────────
@@ -1356,49 +1320,10 @@
       }
     }
 
-    function showNoCredits(tier) {
-      const row = addAnjoBubble();
-      const bubble = row.querySelector('.bubble');
-      bubble.querySelector('.typing')?.remove();
-      const limits = { pro: 50, premium: 100, free: 20 };
-      const limit = limits[tier] || 20;
-      bubble.innerHTML = `You've used all ${limit} messages for today. <a href="/billing" style="color:var(--accent);font-weight:600;margin-left:4px;">View plans</a>`;
-      scrollDown();
-      fetchBillingStatus();
-    }
-
-    // Handle payment success redirect
-    const _params = new URLSearchParams(window.location.search);
-    if (_params.get('payment') === 'success') {
-      history.replaceState({}, '', '/');
-      const _tier = _params.get('tier') || 'pro';
-      const _tierLabel = { pro: 'Pro', premium: 'Premium' }[_tier] || 'Pro';
-      setTimeout(() => {
-        fetchBillingStatus();
-        const row = addAnjoBubble();
-        const bubble = row.querySelector('.bubble');
-        bubble.querySelector('.typing')?.remove();
-        bubble.textContent = `${_tierLabel} subscription active.`;
-        scrollDown();
-      }, 800);
-    } else if (_params.get('payment') === 'credits') {
-      history.replaceState({}, '', '/');
-      const _pack = parseInt(_params.get('pack') || '0');
-      setTimeout(() => {
-        fetchBillingStatus();
-        const row = addAnjoBubble();
-        const bubble = row.querySelector('.bubble');
-        bubble.querySelector('.typing')?.remove();
-        bubble.textContent = _pack ? `${_pack} message credits added.` : 'Credits added.';
-        scrollDown();
-      }, 800);
-    }
-
     // ── Init ──────────────────────────────────────────────────────────────────
     (async () => {
       initOrb();
       fetchStage();
-      fetchBillingStatus();
       fetchCeiling();
       await startSession();
       await loadHistory();
