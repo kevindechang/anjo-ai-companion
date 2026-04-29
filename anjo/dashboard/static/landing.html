@@ -1148,7 +1148,7 @@
     // Detect if user is already logged in and swap CTAs accordingly
     (async () => {
       try {
-        const r = await fetch('/api/billing/status');
+        const r = await fetch('/api/account');
         if (r.ok) {
           // Logged in — swap all "start" CTAs to "Open Anjo"
           document.querySelectorAll('.btn-cta').forEach(el => {
