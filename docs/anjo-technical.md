@@ -784,14 +784,14 @@ Memories are stored twice — once as "what happened" (semantic embedding) and o
 
 **File:** `anjo/memory/long_term.py`
 
-Two collections in a single PersistentClient at `data/chroma_global/`:
+PersistentClient at `data/chroma_global/` with per-user collection pairs:
 
-| Collection | Embedder | Purpose |
+| Collection pattern | Embedder | Purpose |
 |------------|---------|---------|
-| `semantic_memories` | `embed_semantic` — sentence-transformers all-MiniLM-L6-v2 | What happened |
-| `emotional_memories` | `embed_emotional` — custom emotional embedding | How it felt |
+| `sem_{user_id}` | `embed_semantic` — sentence-transformers all-MiniLM-L6-v2 | What happened |
+| `emo_{user_id}` | `embed_emotional` — custom emotional embedding | How it felt |
 
-All documents are filtered by `user_id` metadata. There is no per-user collection separation — one global collection, all queries use `where={"user_id": user_id}`.
+Each user has their own collection pair — O(1) nearest-neighbor search with no metadata pre-filter needed.
 
 ### Memory types
 
